@@ -1,0 +1,300 @@
+// KAKAO 지도를 WebView(웹에선 iframe)로 띄우고 A/B 버스 위치를 JS에 전달하는 화면.
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
+import '../services/bus_service.dart';
+import '../models/bus.dart';
+import 'board.dart';
+import 'surface_native.dart' if (dart.library.js_interop) 'surface_web.dart';
+
+/// 코스별 정문 출발 시각(시:분, 24시간제).
+const Map<String, List<String>> departures = <String, List<String>>{
+  'A': <String>[
+    '08:05',
+    '08:25',
+    '08:45',
+    '09:30',
+    '10:05',
+    '10:25',
+    '10:45',
+    '11:20',
+    '12:40',
+    '13:05',
+    '13:25',
+    '13:45',
+    '14:30',
+    '15:05',
+    '15:25',
+    '15:45',
+    '16:10',
+    '16:40',
+    '17:20',
+    '17:40',
+    '18:00',
+    '18:20',
+    '18:40',
+  ],
+  'B': <String>[
+    '08:10',
+    '08:30',
+    '08:50',
+    '09:40',
+    '10:10',
+    '10:30',
+    '10:50',
+    '11:30',
+    '12:50',
+    '13:10',
+    '13:30',
+    '13:50',
+    '14:40',
+    '15:10',
+    '15:30',
+    '15:50',
+    '16:20',
+    '16:50',
+    '17:30',
+    '17:50',
+    '18:10',
+    '18:30',
+    '18:50',
+  ],
+};
+
+/// 다음 정문 출발 시각('08:45'). 오늘 막차가 지났으면 null.
+String? nextDeparture(String busId, DateTime now) {
+  final String hhmm = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+  for (final String t in departures[busId] ?? const <String>[]) {
+    if (t.compareTo(hhmm) >= 0) return t;
+  }
+  return null;
+}
+
+/// 운행 중이 아닐 때 보여줄 다음 정문 출발 시각. 막차가 지났으면 운행 종료.
+String nextDepartureText(String busId, DateTime now) {
+  final String? t = nextDeparture(busId, now);
+  return t == null ? '오늘 운행 종료' : '다음 출발 $t';
+}
+
+/// 상태 패널에 보여줄 위치 문구. 다음 정류장이 없을 때(종점 대기) 'null'이 찍히지 않게 한다.
+String locationText(Bus? bus, [DateTime? now]) {
+  if (bus == null) return '로딩 중...';
+  if (bus.isRecent != true) return nextDepartureText(bus.busId, now ?? DateTime.now());
+  if (bus.nextStation != null && bus.nextStation != bus.station) {
+    return '${bus.station} → ${bus.nextStation}';
+  }
+  final String here = bus.station ?? '운행중';
+  return bus.status == 'waiting' ? '$here (대기 중)' : here;
+}
+
+class MapView extends StatefulWidget {
+  const MapView({super.key});
+  @override
+  State<MapView> createState() => _MapViewState();
+}
+
+class _MapViewState extends State<MapView> {
+  late final MapSurface _surface;
+  bool _ready = false;
+  String? _lastSig;
+  StreamSubscription<Position>? _locSub;
+  Position? _lastPos;
+
+  @override
+  void initState() {
+    super.initState();
+    _surface = MapSurface(
+      onReady: () {
+        if (mounted && !_ready) {
+          _ready = true;
+          _push(context.read<BusService>());
+          if (_lastPos != null) _pushLocation(_lastPos!);
+        }
+      },
+    );
+    _load();
+    _startMyLocation();
+  }
+
+  // 내 위치: 권한을 받은 뒤 5m 이상 움직일 때마다 지도(JS)에 넘긴다.
+  Future<void> _startMyLocation() async {
+    try {
+      LocationPermission perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) perm = await Geolocator.requestPermission();
+      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) return;
+      _locSub =
+          Geolocator.getPositionStream(
+            locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 5),
+          ).listen((Position p) {
+            _lastPos = p;
+            _pushLocation(p);
+          }, onError: (Object e) => debugPrint('location error: $e'));
+    } catch (e) {
+      debugPrint('location unavailable: $e');
+    }
+  }
+
+  void _pushLocation(Position p) {
+    _surface
+        .run('window.showMyLocation && window.showMyLocation(${p.latitude}, ${p.longitude}, ${p.accuracy});')
+        .onError((_, _) {});
+  }
+
+  Future<void> _load() async {
+    _ready = false;
+    _lastSig = null;
+    await _surface.load(await rootBundle.loadString('assets/web/map.html'));
+  }
+
+  static Map<String, dynamic> serializeOne(Bus b) => <String, dynamic>{
+    'busId': b.busId,
+    'latitude': b.latitude,
+    'longitude': b.longitude,
+    'station': b.station,
+    'nextStation': b.nextStation,
+    'status': b.status,
+    'progress': b.progress,
+    'isRecent': b.isRecent,
+  };
+
+  void _push(BusService svc) {
+    if (!_ready) return;
+    final Bus a = svc.busA ?? Bus(busId: 'A', latitude: 0, longitude: 0);
+    final Bus b = svc.busB ?? Bus(busId: 'B', latitude: 0, longitude: 0);
+    final String sig = '${a.latitude},${a.longitude};${b.latitude},${b.longitude}';
+    if (sig == _lastSig) return;
+    _lastSig = sig;
+    final String json = jsonEncode([serializeOne(a), serializeOne(b)]);
+    _surface.run('window.receiveBusUpdate && window.receiveBusUpdate($json);').onError((_, _) {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final BusService svc = context.watch<BusService>();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _push(svc);
+    });
+
+    // 상단이 검은 안내판이라 시계·배터리 아이콘을 밝게.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: Stack(
+          children: <Widget>[
+            _surface.view,
+            Positioned(top: 0, left: 0, right: 0, child: statusPanel(svc)),
+            Positioned(
+              bottom: 24,
+              left: 16,
+              child: circleButton(Icons.arrow_back, () => Navigator.of(context).maybePop(), '뒤로'),
+            ),
+            Positioned(bottom: 24, right: 16, child: circleButton(Icons.refresh, _load, '지도 새로고침')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 홈 안내판이 그대로 옮겨 온 검은 패널. 배경은 시계·노치 뒤까지 깔고, 글자는 안전 영역부터 놓는다.
+  Widget statusPanel(BusService svc) {
+    return BoardFace(
+      radius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+      child: SafeArea(
+        bottom: false,
+        minimum: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: busCard(id: 'A', bus: svc.busA),
+            ),
+            Container(width: 1, height: 32, margin: const EdgeInsets.symmetric(horizontal: 12), color: Board.seam),
+            Expanded(
+              child: busCard(id: 'B', bus: svc.busB),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget busCard({required String id, Bus? bus}) {
+    final bool online = bus?.isRecent == true;
+    // 번호판 옆에 현재 위치(또는 다음 출발), 끝에 켜진/꺼진 LED.
+    return Row(
+      children: <Widget>[
+        CourseBadge(id, size: 26),
+        const SizedBox(width: 10),
+        Expanded(
+          child: online || bus == null
+              ? Text(
+                  locationText(bus),
+                  // 정류장 이름은 글꼴 축소본에 없는 글자라 기본 글꼴로.
+                  style: const TextStyle(fontSize: 13, height: 1.25, fontWeight: FontWeight.w600, color: Board.amber),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                )
+              : _offHours(id),
+        ),
+        const SizedBox(width: 6),
+        // 켜진 LED = 최근 위치를 받는 중, 꺼진 LED = 운행 안 함.
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: online ? Board.amber : Board.seam,
+            boxShadow: online ? const <BoxShadow>[BoxShadow(color: Color(0x99FFB000), blurRadius: 6)] : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 운행 안 할 때: 홈 안내판과 같은 LED 말투로 다음 정문 출발 시각.
+  Widget _offHours(String id) {
+    final String? t = nextDeparture(id, DateTime.now());
+    if (t == null) return Text('운행 종료', style: ledLabel(color: Board.amberDim));
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Row(
+        children: <Widget>[
+          Text('다음 출발', style: ledLabel(color: Board.amberDim)),
+          const SizedBox(width: 8),
+          LedDigits(t, dot: 2.4),
+        ],
+      ),
+    );
+  }
+
+  Widget circleButton(IconData icon, VoidCallback onTap, String tooltip) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Board.face,
+        shape: const CircleBorder(),
+        elevation: 3,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Icon(icon, size: 24, color: Board.amber),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _locSub?.cancel();
+    _surface.dispose();
+    _lastSig = null;
+    super.dispose();
+  }
+}

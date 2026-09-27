@@ -1,0 +1,434 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-26T16:07:49.293319+00:00",
+  "title": "Design System: 제주대 순환버스",
+  "extensions": {
+    "colorMeta": {
+      "board-face": {
+        "role": "neutral",
+        "displayName": "Board Face",
+        "tonalRamp": [
+          "#0B0D0F",
+          "#121518",
+          "#181C20",
+          "#1C2024",
+          "#22272C",
+          "#23282D",
+          "#2E343A",
+          "#3A4148"
+        ]
+      },
+      "board-seam": {
+        "role": "neutral",
+        "displayName": "Board Seam",
+        "tonalRamp": [
+          "#0B0D0F",
+          "#121518",
+          "#181C20",
+          "#1C2024",
+          "#22272C",
+          "#23282D",
+          "#2E343A",
+          "#3A4148"
+        ]
+      },
+      "led-amber": {
+        "role": "primary",
+        "displayName": "LED Amber",
+        "tonalRamp": [
+          "#130900",
+          "#322002",
+          "#563904",
+          "#7C550A",
+          "#A57211",
+          "#D19004",
+          "#FFB42A",
+          "#FEECD1"
+        ]
+      },
+      "led-amber-dim": {
+        "role": "primary",
+        "displayName": "Dimmed LED",
+        "tonalRamp": [
+          "#120900",
+          "#312101",
+          "#543B02",
+          "#795705",
+          "#A1740B",
+          "#C4963C",
+          "#ECBC64",
+          "#FEECCD"
+        ]
+      },
+      "departing-red": {
+        "role": "tertiary",
+        "displayName": "Departing Red",
+        "tonalRamp": [
+          "#1F0000",
+          "#4B0101",
+          "#7C0303",
+          "#B10807",
+          "#DC372B",
+          "#FC6858",
+          "#FEAC9F",
+          "#FFE8E4"
+        ]
+      },
+      "course-a": {
+        "role": "secondary",
+        "displayName": "Course A Blue",
+        "tonalRamp": [
+          "#000826",
+          "#001E58",
+          "#04388E",
+          "#0953C9",
+          "#2473FB",
+          "#669DFC",
+          "#A4C5FD",
+          "#E2EFFF"
+        ]
+      },
+      "course-b": {
+        "role": "secondary",
+        "displayName": "Course B Green",
+        "tonalRamp": [
+          "#001004",
+          "#022D12",
+          "#044D24",
+          "#0A7037",
+          "#11964B",
+          "#21BC62",
+          "#40E77F",
+          "#C9FED4"
+        ]
+      },
+      "amber-ink": {
+        "role": "neutral",
+        "displayName": "Amber Ink",
+        "tonalRamp": [
+          "#130900",
+          "#322002",
+          "#563904",
+          "#7C550A",
+          "#A57211",
+          "#D19004",
+          "#FFB42A",
+          "#FEECD1"
+        ]
+      },
+      "amber-on-light": {
+        "role": "primary",
+        "displayName": "Amber on Light",
+        "tonalRamp": [
+          "#130900",
+          "#322002",
+          "#563904",
+          "#7C550A",
+          "#A57211",
+          "#D19004",
+          "#FFB42A",
+          "#FEECD1"
+        ],
+        "canonical": "ColorScheme.fromSeed(#FFB000, light).primary (sampled #7E570E)"
+      },
+      "amber-on-dark": {
+        "role": "primary",
+        "displayName": "Amber on Dark",
+        "tonalRamp": [
+          "#130900",
+          "#322002",
+          "#563904",
+          "#7C550A",
+          "#A57211",
+          "#D19004",
+          "#FFB42A",
+          "#FEECD1"
+        ],
+        "canonical": "ColorScheme.fromSeed(#FFB000, dark).primary (sampled #F2BE6E)"
+      },
+      "frame-light": {
+        "role": "neutral",
+        "displayName": "Housing (light)",
+        "tonalRamp": [
+          "#B9C0C7",
+          "#D3D8DD",
+          "#E8EBEE",
+          "#EDEFF2",
+          "#F4F5F7",
+          "#F8F9FA",
+          "#FCFCFD",
+          "#FFFFFF"
+        ]
+      },
+      "frame-dark": {
+        "role": "neutral",
+        "displayName": "Housing (dark)",
+        "tonalRamp": [
+          "#0B0D0F",
+          "#121518",
+          "#181C20",
+          "#1C2024",
+          "#22272C",
+          "#23282D",
+          "#2E343A",
+          "#3A4148"
+        ]
+      },
+      "plate-light": {
+        "role": "neutral",
+        "displayName": "Plate (light)",
+        "tonalRamp": [
+          "#B9C0C7",
+          "#D3D8DD",
+          "#E8EBEE",
+          "#EDEFF2",
+          "#F4F5F7",
+          "#F8F9FA",
+          "#FCFCFD",
+          "#FFFFFF"
+        ]
+      },
+      "plate-dark": {
+        "role": "neutral",
+        "displayName": "Plate (dark)",
+        "tonalRamp": [
+          "#0B0D0F",
+          "#121518",
+          "#181C20",
+          "#1C2024",
+          "#22272C",
+          "#23282D",
+          "#2E343A",
+          "#3A4148"
+        ]
+      },
+      "hairline-light": {
+        "role": "neutral",
+        "displayName": "Hairline (light)",
+        "tonalRamp": [
+          "#B9C0C7",
+          "#D3D8DD",
+          "#E8EBEE",
+          "#EDEFF2",
+          "#F4F5F7",
+          "#F8F9FA",
+          "#FCFCFD",
+          "#FFFFFF"
+        ]
+      },
+      "hairline-dark": {
+        "role": "neutral",
+        "displayName": "Hairline (dark)",
+        "tonalRamp": [
+          "#0B0D0F",
+          "#121518",
+          "#181C20",
+          "#1C2024",
+          "#22272C",
+          "#23282D",
+          "#2E343A",
+          "#3A4148"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "board-display": {
+        "displayName": "Board Display",
+        "purpose": "App-bar titles and the board's wait text. Galmuri is bold-only and subset to fixed strings."
+      },
+      "board-label": {
+        "displayName": "Board Label",
+        "purpose": "Board header/footer and LED tags."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Month headings on 학사일정."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Home menu row titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Menus and notices."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Dates, subtitles, station names; tabular figures."
+      }
+    },
+    "shadows": [
+      {
+        "name": "led-glow",
+        "value": "lit dot: blur 0.6 × dot diameter, led-amber at alpha 90/255",
+        "purpose": "Glow of a lit LedDigits dot; part of the LED material."
+      },
+      {
+        "name": "status-led",
+        "value": "0 0 6px rgba(255,176,0,0.6)",
+        "purpose": "Map panel 'online' LED (8px dot)."
+      },
+      {
+        "name": "map-button",
+        "value": "Material elevation 3",
+        "purpose": "Only true shadow: round buttons floating over the live map."
+      }
+    ],
+    "motion": [
+      {
+        "name": "led-sweep",
+        "value": "320ms linear, column by column from the left",
+        "purpose": "LedDigits lights on first build and on every value change; instant under reduced motion."
+      },
+      {
+        "name": "board-hero",
+        "value": "Hero tag 'board', flat board-face flight shuttle, default route duration",
+        "purpose": "Home board flies up to become the map's top status panel."
+      },
+      {
+        "name": "board-ink",
+        "value": "splash led-amber alpha 30, highlight alpha 14",
+        "purpose": "Press feedback on the board face."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "600px",
+        "purpose": "Home board centres above it; list screens cap at 600px."
+      },
+      {
+        "name": "home-max",
+        "value": "440px",
+        "purpose": "Home column max width."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Departure Board",
+      "kind": "custom",
+      "refersTo": "board-face",
+      "description": "Signature: stop-sign board with course rows; tap opens the map.",
+      "html": "<div class=\"ds-board\"><div class=\"ds-board-head\"><span>정문 출발</span><span class=\"ds-led ds-led-sm\">08:01</span></div><div class=\"ds-board-row\"><span class=\"ds-badge ds-badge-a\">A</span><span class=\"ds-led\">08:05</span><span class=\"ds-wait\">4분 후</span></div><div class=\"ds-board-row\"><span class=\"ds-badge ds-badge-b\">B</span><span class=\"ds-led\">08:10</span><span class=\"ds-wait ds-wait-red\">곧 출발</span></div><div class=\"ds-board-foot\">실시간 버스 보기 ›</div></div>",
+      "css": ".ds-board{background:#0B0D0F;border:1px solid #23282D;border-radius:10px;color:#FFB000;font-family:Galmuri,monospace;max-width:440px;cursor:pointer;overflow:hidden}.ds-board:hover{background:#15130d}.ds-board:focus-visible{outline:2px solid #FFB000;outline-offset:2px}.ds-board-head,.ds-board-row,.ds-board-foot{display:flex;align-items:center;gap:16px;padding:16px 18px;border-bottom:1px solid #23282D}.ds-board-foot{border-bottom:0;font-size:12px}.ds-board-head{color:#B88A2E;font-size:12px;justify-content:space-between}.ds-led{font-family:'Courier New',monospace;font-size:34px;letter-spacing:2px;text-shadow:0 0 4px rgba(255,176,0,.6)}.ds-led-sm{font-size:14px;color:#B88A2E}.ds-wait{margin-left:auto;font-size:24px}.ds-wait-red{color:#FF5A4A}.ds-badge{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:4px;color:#fff;font:800 20px system-ui,sans-serif}.ds-badge-a{background:#0066FF}.ds-badge-b{background:#00CC66}"
+    },
+    {
+      "name": "Course Badge",
+      "kind": "custom",
+      "refersTo": "course-badge-a",
+      "description": "Course number plate; color is a brand commitment.",
+      "html": "<span class=\"ds-cb ds-cb-a\">A</span> <span class=\"ds-cb ds-cb-b\">B</span>",
+      "css": ".ds-cb{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:4px;color:#fff;font:800 20px/1 system-ui,sans-serif}.ds-cb-a{background:#0066FF}.ds-cb-b{background:#00CC66}"
+    },
+    {
+      "name": "LED Tag",
+      "kind": "chip",
+      "refersTo": "led-tag",
+      "description": "Board fragment on a plate for status: D-n, 진행 중, 오늘.",
+      "html": "<span class=\"ds-ledtag\">D-3</span>",
+      "css": ".ds-ledtag{display:inline-block;background:#0B0D0F;color:#FFB000;font-family:Galmuri,monospace;font-size:12px;line-height:1.2;padding:5px 8px;border-radius:4px}"
+    },
+    {
+      "name": "Menu Row",
+      "kind": "nav",
+      "refersTo": "icon-tile",
+      "description": "Home menu row: black icon tile, title, one-line subtitle, chevron.",
+      "html": "<a class=\"ds-row\" href=\"#\"><span class=\"ds-tile\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#FFB000\" stroke-width=\"2\"><rect x=\"4\" y=\"5\" width=\"16\" height=\"15\" rx=\"2\"/><path d=\"M8 3v4M16 3v4M4 10h16\"/></svg></span><span class=\"ds-row-text\"><b>학사일정</b><small>D-3 · 2학기 중간고사</small></span><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#5f6368\" stroke-width=\"2\"><path d=\"M9 6l6 6-6 6\"/></svg></a>",
+      "css": ".ds-row{display:flex;align-items:center;gap:12px;padding:14px 12px 14px 16px;background:#fff;border:1px solid #D3D8DD;border-radius:10px;text-decoration:none;color:#1b1c1e;max-width:440px}.ds-row:hover{background:#F4F5F7}.ds-row:focus-visible{outline:2px solid #FFB000;outline-offset:2px}.ds-tile{display:grid;place-items:center;width:36px;height:36px;border-radius:6px;background:#0B0D0F}.ds-row-text{flex:1;display:flex;flex-direction:column;gap:2px}.ds-row-text b{font:700 16px system-ui,sans-serif}.ds-row-text small{font-size:13px;color:#5f6368}"
+    },
+    {
+      "name": "Plate Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Content plate; today/ongoing gets a 1.5px amber outline; past items lose the plate.",
+      "html": "<div class=\"ds-card\">09.21 (월)</div><div class=\"ds-card ds-card-today\">09.22 (화) <span class=\"ds-ledtag\">오늘</span></div><div class=\"ds-card-past\">09.01(화) 2학기 개강</div>",
+      "css": ".ds-card,.ds-card-past{padding:16px;margin-bottom:8px;font:700 17px system-ui,sans-serif;color:#1b1c1e}.ds-card{background:#fff;border:1px solid #D3D8DD;border-radius:8px}.ds-card-today{border:1.5px solid #FFB000}.ds-card-past{font-weight:600;font-size:15px;color:#5f6368}.ds-ledtag{background:#0B0D0F;color:#FFB000;font-family:Galmuri,monospace;font-size:12px;padding:4px 8px;border-radius:4px;margin-left:8px}"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Category/cafeteria chooser; selected fills amber.",
+      "html": "<button class=\"ds-chip ds-chip-on\">백두관</button> <button class=\"ds-chip\">사라캠퍼스</button>",
+      "css": ".ds-chip{background:#fff;border:1px solid #D3D8DD;border-radius:6px;padding:6px 14px;font:600 14px system-ui,sans-serif;color:#1b1c1e;cursor:pointer}.ds-chip:hover{background:#F4F5F7}.ds-chip:focus-visible{outline:2px solid #FFB000;outline-offset:2px}.ds-chip-on{background:#FFB000;border-color:#FFB000;color:#1A1200;font-weight:700}.ds-chip-on:hover{background:#FFB000}"
+    },
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "refersTo": "button-outlined",
+      "description": "Retry / load more.",
+      "html": "<button class=\"ds-btn\">다시 시도</button>",
+      "css": ".ds-btn{min-height:48px;padding:0 24px;border-radius:6px;border:1px solid #74777f;background:transparent;color:#7E570E;font:500 14px system-ui,sans-serif;cursor:pointer}.ds-btn:hover{background:rgba(126,87,14,.08)}.ds-btn:focus-visible{outline:2px solid #7E570E;outline-offset:2px}.ds-btn:active{background:rgba(126,87,14,.14)}"
+    },
+    {
+      "name": "App Bar",
+      "kind": "nav",
+      "refersTo": "app-bar",
+      "description": "Board strip on every sub-screen.",
+      "html": "<header class=\"ds-appbar\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#FFB000\" stroke-width=\"2\"><path d=\"M19 12H5M11 6l-6 6 6 6\"/></svg><span>학식 메뉴</span></header>",
+      "css": ".ds-appbar{display:flex;align-items:center;gap:32px;height:56px;padding:0 16px;background:#0B0D0F;color:#FFB000;font-family:Galmuri,monospace;font-size:24px;line-height:1.2}"
+    },
+    {
+      "name": "Map Button",
+      "kind": "button",
+      "refersTo": "map-button",
+      "description": "Round board-face button floating over the map; the only shadowed element.",
+      "html": "<button class=\"ds-mapbtn\" aria-label=\"뒤로\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#FFB000\" stroke-width=\"2\"><path d=\"M19 12H5M11 6l-6 6 6 6\"/></svg></button>",
+      "css": ".ds-mapbtn{width:56px;height:56px;border-radius:50%;border:0;background:#0B0D0F;display:grid;place-items:center;box-shadow:0 3px 6px rgba(0,0,0,.25);cursor:pointer}.ds-mapbtn:hover{background:#1a1a14}.ds-mapbtn:focus-visible{outline:2px solid #FFB000;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Stop Sign Board",
+    "overview": "**Creative North Star: \"The Stop Sign Board\"**\n\nThe app is a bus-stop arrival board (BIS) before it is anything else. The first screen is a black acrylic face with amber LEDs showing the next A and B departure from 정문. Everything around it is the board's grey metal housing. White plates hold the everyday lists (portal, 학사일정, 공지, 학식). The board appears only where something is live or time-sensitive. It is a sign you glance at, not a dashboard.\n\nDensity is low and one-handed: a 440px column on home, a 600px column on list screens, 48px touch rows. The one theatrical beat is continuity. The home board is a Hero (`'board'`) that flies up and becomes the map's top status panel, so the sign you tapped is the sign you land on.",
+    "keyCharacteristics": [
+      "Black board face, amber LEDs, grey housing; white plates for ordinary content.",
+      "Two type materials on the board: square-pixel Hangul (Galmuri) for words, round-dot LEDs (LedDigits) for times and numbers.",
+      "Flat. Depth comes from 1px seams, not shadows.",
+      "Course colors appear only as number plates (A blue, B green).",
+      "LEDs light column by column from the left when a value changes."
+    ],
+    "rules": [
+      {
+        "name": "The One Red Rule",
+        "body": "Red means \"go now\" and nothing else. No errors, badges, or emphasis in red.",
+        "section": "colors"
+      },
+      {
+        "name": "The Plate Is the Course Rule",
+        "body": "Course color lives on a square number plate with a letter, never as a text color, tint, or background wash.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Materials Rule",
+        "body": "Words on the board are square pixels (Galmuri). Times and numbers are round LED dots (LedDigits). Dot-matrix Hangul was considered and not built; this split is the shipped decision, and closing it is an open item.",
+        "section": "typography"
+      },
+      {
+        "name": "The Subset Rule",
+        "body": "The Galmuri file contains only the fixed board strings plus printable ASCII (17KB). New board text needs the font re-subset with the `pyftsubset` command in `lib/ui/board.dart`, or its missing glyphs fall back to the system font. Variable text such as station names deliberately uses the system font in amber (600, 13).",
+        "section": "typography"
+      },
+      {
+        "name": "The Seam Not Shadow Rule",
+        "body": "Separate surfaces with a 1px line (seam on the board, hairline on plates). Never with a drop shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do put live, time-sensitive answers on the board face and everything else on white/dark plates.",
+      "Do draw times and counts with LedDigits and board words with Galmuri at 12 or 24.",
+      "Do re-subset Galmuri whenever a new fixed board string is added.",
+      "Do mark \"today\"/\"current\" with the 1.5px amber outline or an LED tag.",
+      "Do retire past items by removing their plate, not by lowering opacity.",
+      "Do honour reduced motion: LEDs appear lit, with no sweep."
+    ],
+    "donts": [
+      "Don't use red for anything but '곧 출발'.",
+      "Don't change or approximate the course colors, or apply them outside the number plate and map markers.",
+      "Don't add drop shadows to plates or the board. Use the 1px seam or hairline.",
+      "Don't set amber text directly on white plates. Use the seed-derived amber-on-light.",
+      "Don't fade past or inactive content with opacity."
+    ]
+  }
+}

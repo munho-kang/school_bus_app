@@ -1,0 +1,8 @@
+# Cloudflare 배포 설정. 배포: 이 폴더에서 `npx wrangler deploy`
+name = "jejunu-bus-relay"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+# 버스 정보를 가져가도 되는 웹 주소들(쉼표로 구분). GitHub Pages 주소를 여기에 추가한다.
+ALLOWED_ORIGINS = "https://munho-kang.github.io, http://localhost:8765"
