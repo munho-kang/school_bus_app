@@ -2,6 +2,7 @@
 // 제목을 누르면 학교 홈페이지 원문을 연다(앱은 앱 안에서, 웹은 새 탭).
 import 'package:flutter/material.dart';
 import '../services/notice_service.dart';
+import 'theme.dart';
 import 'surface_native.dart' if (dart.library.js_interop) 'surface_web.dart';
 
 class NoticePage extends StatefulWidget {
@@ -22,6 +23,7 @@ class _NoticePageState extends State<NoticePage> {
   bool _loading = false;
   bool _failed = false;
   bool _hasMore = true;
+  bool _pinnedOpen = false;
   int _request = 0; // 분류를 빨리 바꿀 때 늦게 도착한 이전 응답을 버리기 위한 번호
 
   @override
@@ -83,7 +85,7 @@ class _NoticePageState extends State<NoticePage> {
           children: <Widget>[
             const Text('공지를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.', textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            OutlinedButton(onPressed: _load, child: const Text('다시 시도')),
+            Pressable(child: OutlinedButton(onPressed: _load, child: const Text('다시 시도'))),
           ],
         ),
       );
@@ -94,14 +96,60 @@ class _NoticePageState extends State<NoticePage> {
     if (!_hasMore) return const SizedBox(height: 24);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Center(child: OutlinedButton(onPressed: _more, child: const Text('더 보기'))),
+      child: Center(child: Pressable(child: OutlinedButton(onPressed: _more, child: const Text('더 보기')))),
+    );
+  }
+
+  // 고정 공지 묶음: 머리줄을 누르면 부드럽게 펼쳐지고 접힌다.
+  Widget _pinnedCard() {
+    return AppCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: <Widget>[
+          Pressable(
+            scale: 0.97,
+            child: InkWell(
+              onTap: () => setState(() => _pinnedOpen = !_pinnedOpen),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
+                child: Row(
+                  children: <Widget>[
+                    const Icon(Icons.push_pin_outlined, size: 20, color: AppColors.primary),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text('고정 공지 ${_pinned.length}개', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    ),
+                    AnimatedRotation(
+                      turns: _pinnedOpen ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: const Icon(Icons.expand_more, color: AppColors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: _pinnedOpen
+                ? Column(
+                    children: <Widget>[
+                      for (final Notice n in _pinned) ...<Widget>[const Divider(indent: 16, endIndent: 16), _NoticeTile(n)],
+                    ],
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('공지사항')),
+      appBar: pageBar('공지사항'),
       body: Center(
         // 넓은 화면(웹)에서 목록이 끝까지 늘어나지 않게 폭을 제한한다.
         child: ConstrainedBox(
@@ -110,16 +158,18 @@ class _NoticePageState extends State<NoticePage> {
             children: <Widget>[
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
                 child: Row(
                   children: <Widget>[
                     for (final MapEntry<String, String?> c in noticeCategories.entries)
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(c.key),
-                          selected: c.value == _category,
-                          onSelected: (_) => _selectCategory(c.value),
+                        child: Pressable(
+                          child: ChoiceChip(
+                            label: Text(c.key),
+                            selected: c.value == _category,
+                            onSelected: (_) => _selectCategory(c.value),
+                          ),
                         ),
                       ),
                   ],
@@ -127,14 +177,21 @@ class _NoticePageState extends State<NoticePage> {
               ),
               Expanded(
                 child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
                   children: <Widget>[
-                    if (_pinned.isNotEmpty)
-                      ExpansionTile(
-                        leading: const Icon(Icons.push_pin_outlined),
-                        title: Text('고정 공지 ${_pinned.length}개'),
-                        children: <Widget>[for (final Notice n in _pinned) _NoticeTile(n)],
+                    if (_pinned.isNotEmpty) ...<Widget>[_pinnedCard(), const SizedBox(height: 12)],
+                    if (_items.isNotEmpty)
+                      AppCard(
+                        padding: EdgeInsets.zero,
+                        child: Column(
+                          children: <Widget>[
+                            for (final (int i, Notice n) in _items.indexed) ...<Widget>[
+                              if (i > 0) const Divider(indent: 16, endIndent: 16),
+                              _NoticeTile(n),
+                            ],
+                          ],
+                        ),
                       ),
-                    for (final Notice n in _items) ...<Widget>[_NoticeTile(n), const Divider(indent: 16, endIndent: 16)],
                     _footer(),
                   ],
                 ),
@@ -155,13 +212,34 @@ class _NoticeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String date = n.date.length == 10 ? n.date.substring(5).replaceAll('-', '.') : n.date;
-    return ListTile(
-      title: Text(n.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(
-        <String>[n.category, n.writer, date].where((String s) => s.isNotEmpty).join(' · '),
-        style: const TextStyle(fontFeatures: <FontFeature>[FontFeature.tabularFigures()]),
+    return Pressable(
+      scale: 0.98,
+      child: InkWell(
+        onTap: () => openPortal(context, n.url, title: '공지사항'),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                n.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, height: 1.35),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                <String>[n.category, n.writer, date].where((String s) => s.isNotEmpty).join(' · '),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSub,
+                  fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      onTap: () => openPortal(context, n.url, title: '공지사항'),
     );
   }
 }

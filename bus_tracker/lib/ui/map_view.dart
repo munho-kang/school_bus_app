@@ -7,7 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import '../services/bus_service.dart';
 import '../models/bus.dart';
-import 'board.dart';
+import 'theme.dart';
 import 'surface_native.dart' if (dart.library.js_interop) 'surface_web.dart';
 
 /// 코스별 정문 출발 시각(시:분, 24시간제).
@@ -179,7 +179,7 @@ class _MapViewState extends State<MapView> {
       if (mounted) _push(svc);
     });
 
-    // 상단이 검은 안내판이라 시계·배터리 아이콘을 밝게.
+    // 상단이 초록 패널이라 시계·배터리 아이콘을 밝게.
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
@@ -199,19 +199,26 @@ class _MapViewState extends State<MapView> {
     );
   }
 
-  // 홈 안내판이 그대로 옮겨 온 검은 패널. 배경은 시계·노치 뒤까지 깔고, 글자는 안전 영역부터 놓는다.
+  // 홈 정문 출발 카드가 그대로 옮겨 온 초록 패널. 배경은 시계·노치 뒤까지 깔고, 글자는 안전 영역부터 놓는다.
   Widget statusPanel(BusService svc) {
-    return BoardFace(
-      radius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+    return HeroCard(
+      tone: HeroTone.live,
+      padding: EdgeInsets.zero,
+      radius: const BorderRadius.vertical(bottom: Radius.circular(22)),
       child: SafeArea(
         bottom: false,
-        minimum: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        minimum: const EdgeInsets.fromLTRB(16, 14, 16, 16),
         child: Row(
           children: <Widget>[
             Expanded(
               child: busCard(id: 'A', bus: svc.busA),
             ),
-            Container(width: 1, height: 32, margin: const EdgeInsets.symmetric(horizontal: 12), color: Board.seam),
+            Container(
+              width: 1,
+              height: 32,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: Colors.white.withValues(alpha: 0.3),
+            ),
             Expanded(
               child: busCard(id: 'B', bus: svc.busB),
             ),
@@ -223,67 +230,59 @@ class _MapViewState extends State<MapView> {
 
   Widget busCard({required String id, Bus? bus}) {
     final bool online = bus?.isRecent == true;
-    // 번호판 옆에 현재 위치(또는 다음 출발), 끝에 켜진/꺼진 LED.
+    final String? next = nextDeparture(id, DateTime.now());
+    // 번호판 옆에 현재 위치(또는 다음 출발), 끝에 켜진/꺼진 점.
     return Row(
       children: <Widget>[
-        CourseBadge(id, size: 26),
+        CourseBadge(id, size: 28),
         const SizedBox(width: 10),
         Expanded(
-          child: online || bus == null
-              ? Text(
-                  locationText(bus),
-                  // 정류장 이름은 글꼴 축소본에 없는 글자라 기본 글꼴로.
-                  style: const TextStyle(fontSize: 13, height: 1.25, fontWeight: FontWeight.w600, color: Board.amber),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                )
-              : _offHours(id),
+          child: Text(
+            online || bus == null ? locationText(bus) : (next == null ? '운행 종료' : '다음 출발 $next'),
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.25,
+              fontWeight: FontWeight.w600,
+              color: online || bus == null ? Colors.white : Colors.white70,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         const SizedBox(width: 6),
-        // 켜진 LED = 최근 위치를 받는 중, 꺼진 LED = 운행 안 함.
+        // 켜진 점 = 최근 위치를 받는 중, 꺼진 점 = 운행 안 함.
         Container(
           width: 8,
           height: 8,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: online ? Board.amber : Board.seam,
-            boxShadow: online ? const <BoxShadow>[BoxShadow(color: Color(0x99FFB000), blurRadius: 6)] : null,
+            color: online ? Colors.white : Colors.white.withValues(alpha: 0.3),
+            boxShadow: online ? const <BoxShadow>[BoxShadow(color: Colors.white70, blurRadius: 6)] : null,
           ),
         ),
       ],
     );
   }
 
-  // 운행 안 할 때: 홈 안내판과 같은 LED 말투로 다음 정문 출발 시각.
-  Widget _offHours(String id) {
-    final String? t = nextDeparture(id, DateTime.now());
-    if (t == null) return Text('운행 종료', style: ledLabel(color: Board.amberDim));
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: Alignment.centerLeft,
-      child: Row(
-        children: <Widget>[
-          Text('다음 출발', style: ledLabel(color: Board.amberDim)),
-          const SizedBox(width: 8),
-          LedDigits(t, dot: 2.4),
-        ],
-      ),
-    );
-  }
-
   Widget circleButton(IconData icon, VoidCallback onTap, String tooltip) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Board.face,
-        shape: const CircleBorder(),
-        elevation: 3,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Icon(icon, size: 24, color: Board.amber),
+    return overMap(
+      Tooltip(
+        message: tooltip,
+        child: Pressable(
+          scale: 0.9,
+          child: Material(
+            color: AppColors.card,
+            shape: const CircleBorder(),
+            elevation: 3,
+            shadowColor: Colors.black26,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Icon(icon, size: 24, color: AppColors.text),
+              ),
+            ),
           ),
         ),
       ),

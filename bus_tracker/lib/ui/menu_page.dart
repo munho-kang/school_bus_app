@@ -2,7 +2,7 @@
 // 운영시간·가격은 오른쪽 위 버튼으로 학교 홈페이지 원문에서 본다.
 import 'package:flutter/material.dart';
 import '../services/menu_service.dart';
-import 'board.dart';
+import 'theme.dart';
 import 'surface_native.dart' if (dart.library.js_interop) 'surface_web.dart';
 
 class MenuPage extends StatefulWidget {
@@ -67,7 +67,7 @@ class _MenuPageState extends State<MenuPage> {
           children: <Widget>[
             const Text('식단을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.', textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            OutlinedButton(onPressed: _load, child: const Text('다시 시도')),
+            Pressable(child: OutlinedButton(onPressed: _load, child: const Text('다시 시도'))),
           ],
         ),
       );
@@ -87,8 +87,8 @@ class _MenuPageState extends State<MenuPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('학식 메뉴'),
+      appBar: pageBar(
+        '학식 메뉴',
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.open_in_new),
@@ -105,23 +105,25 @@ class _MenuPageState extends State<MenuPage> {
             children: <Widget>[
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
                 child: Row(
                   children: <Widget>[
                     for (final MapEntry<String, String> c in cafeterias.entries)
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(c.key),
-                          selected: c.value == _place,
-                          onSelected: (_) => _select(c.value),
+                        child: Pressable(
+                          child: ChoiceChip(
+                            label: Text(c.key),
+                            selected: c.value == _place,
+                            onSelected: (_) => _select(c.value),
+                          ),
                         ),
                       ),
                   ],
                 ),
               ),
               // 카드가 5~7장뿐이라 한 번에 다 그린다(오늘 카드로 스크롤하려면 그려져 있어야 함).
-              Expanded(child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(12, 0, 12, 24), child: _body())),
+              Expanded(child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 24), child: _body())),
             ],
           ),
         ),
@@ -138,16 +140,12 @@ class _DayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme cs = Theme.of(context).colorScheme;
     // 날짜가 있는 식단은 메뉴를 한 줄로 잇고, 고정 메뉴 안내문은 줄을 그대로 둔다.
     final String sep = RegExp(r'^\d').hasMatch(day.label) ? ' · ' : '\n';
-    return Card(
-      margin: const EdgeInsets.only(top: 12),
-      shape: today
-          ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Board.amber, width: 1.5))
-          : null,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: AppCard(
+        highlight: today,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -156,24 +154,21 @@ class _DayCard extends StatelessWidget {
                 Text(day.label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                 if (today) ...<Widget>[
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: Board.face, borderRadius: BorderRadius.circular(4)),
-                    child: Text('오늘', style: ledLabel()),
-                  ),
+                  const Pill('오늘', bg: AppColors.primary, fg: Colors.white),
                 ],
               ],
             ),
             for (final (String name, List<String> items) in day.meals)
               if (items.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.only(top: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       if (name.isNotEmpty)
-                        Text(name, style: TextStyle(color: cs.primary, fontSize: 13, fontWeight: FontWeight.w600)),
-                      Text(items.join(sep), style: const TextStyle(height: 1.4)),
+                        Text(name, style: const TextStyle(color: AppColors.onPrimaryTint, fontSize: 13, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 2),
+                      Text(items.join(sep), style: const TextStyle(fontSize: 15, height: 1.45)),
                     ],
                   ),
                 ),

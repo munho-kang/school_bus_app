@@ -28,11 +28,19 @@ class MapSurface {
 
   Future<void> load(String html) async => _frame.srcdoc = html.toJS;
 
-  Future<void> run(String js) async =>
-      _frame.contentWindow?.callMethod('eval'.toJS, js.toJS);
+  Future<void> run(String js) async => _frame.contentWindow?.callMethod('eval'.toJS, js.toJS);
 
   void dispose() => web.window.removeEventListener('message', _listener);
 }
 
-void openPortal(BuildContext context, String url, {String title = ''}) =>
-    web.window.open(url, '_blank');
+void openPortal(BuildContext context, String url, {String title = ''}) => web.window.open(url, '_blank');
+
+/// 지도 iframe 위에 떠 있는 Flutter 버튼이 클릭을 받게 한다. 브라우저는 iframe 자리의 클릭을 iframe에 먼저 주므로,
+/// 버튼 밑에 보이지 않는 HTML 칸을 한 겹 깔아 그 자리의 클릭을 Flutter로 돌린다(pointer_interceptor 패키지와 같은 방법).
+Widget overMap(Widget child) => Stack(
+  alignment: Alignment.center,
+  children: <Widget>[
+    Positioned.fill(child: HtmlElementView.fromTagName(tagName: 'div', isVisible: false)),
+    child,
+  ],
+);

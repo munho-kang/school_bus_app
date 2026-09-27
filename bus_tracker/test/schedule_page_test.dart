@@ -23,11 +23,31 @@ void main() {
     }
   });
 
-  testWidgets('월별 제목과 일정이 보임', (WidgetTester tester) async {
+  test('그날 일정: 하루짜리가 앞, 기간 안이면 포함', () {
+    expect(schedulesOn(DateTime(2026, 9, 30)).map(((String, String?, String) e) => e.$3), <String>[
+      '2학기 수강포기 만료일, 휴학 신청기간 만료일',
+      '2학기 휴학 신청 및 허가 기간',
+    ]);
+    expect(schedulesOn(DateTime(2026, 8, 1)), isEmpty);
+    expect(schedulesOn(DateTime(2027, 1, 18)).single.$3, '동기계절수업 개강'); // 해 넘긴 기간의 마지막 날
+  });
+  test('칸 이름 줄이기', () => expect(shortTitle('(대학원) 2학기 외국어 및 종합시험'), '외국어 및 종합시험'));
+
+  testWidgets('달력: 이번 달·오늘 일정이 보이고, 날짜를 누르면 그날 일정, 화살표로 달 이동', (WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(home: SchedulePage(today: today)));
+    expect(find.text('2026년 9월'), findsOneWidget);
+    expect(find.text('9월 27일 일요일'), findsOneWidget);
+    expect(find.text('2학기 휴학 신청 및 허가 기간'), findsOneWidget); // 오늘에 걸친 기간 일정(상세)
+
+    await tester.tap(find.text('29'));
     await tester.pumpAndSettle();
-    expect(find.text('9월'), findsOneWidget);
+    expect(find.text('9월 29일 화요일'), findsOneWidget);
     expect(find.text('2학기 수업일수 1/4선'), findsOneWidget);
-    expect(find.text('D-2'), findsWidgets);
+    expect(find.text('D-2'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('다음 달'));
+    await tester.pumpAndSettle();
+    expect(find.text('2026년 10월'), findsOneWidget);
+    expect(find.text('10월 1일 목요일'), findsOneWidget);
   });
 }

@@ -60,11 +60,16 @@ flutter:
   assets:
     - assets/web/
 
-  # 안내판 문구용 픽셀 글꼴(갈무리, OFL). 쓰는 글자만 담은 축소본 — lib/ui/board.dart 참고.
+  # 본문 글꼴(Pretendard, OFL) — 휴대폰·웹 어디서나 같은 글꼴로 보이게 번들한다.
   fonts:
-    - family: Galmuri
+    - family: Pretendard
       fonts:
-        - asset: assets/fonts/Galmuri11-Bold.ttf
+        - asset: assets/fonts/Pretendard-Regular.otf
+          weight: 400
+        - asset: assets/fonts/Pretendard-SemiBold.otf
+          weight: 600
+        - asset: assets/fonts/Pretendard-Bold.otf
+          weight: 700
 
    # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

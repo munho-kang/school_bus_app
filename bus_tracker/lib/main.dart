@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/bus_service.dart';
-import 'ui/board.dart';
+import 'ui/theme.dart';
 import 'ui/home_page.dart';
 
 void main() {
@@ -23,8 +23,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: '제주대 순환버스',
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(Brightness.light),
-      darkTheme: buildTheme(Brightness.dark),
+      theme: buildTheme(),
       home: const HomePage(),
      );
    }
