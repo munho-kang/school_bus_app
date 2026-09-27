@@ -100,8 +100,14 @@ near(locateBus(bd, H, xy(170, -9)).along, 170, 3);
 near(locateBus(bd, H, xy(130, -9)).along, 284, 3);                           // 되돌아 40m 서진 → 서쪽길
 
 // 버스가 움직여도 지나온 길 흔적(선·점)은 남지 않는다: 버스 표시 1개 + 화살표 최대 4개만
-for (const t of [0.2, 0.5, 0.8]) updateBusMarkers([{ busId: 'B', latitude: -t, longitude: 0 }]);
+for (const t of [0.2, 0.5, 0.8]) updateBusMarkers([{ busId: 'B', latitude: -t, longitude: 0, isRecent: true }]);
 assert.equal(onMap.Polyline, 0);
-assert.ok(onMap.CustomOverlay >= 1 && onMap.CustomOverlay <= 5, `overlays on map: ${onMap.CustomOverlay}`);
+assert.ok(onMap.CustomOverlay > 1 && onMap.CustomOverlay <= 5, `overlays on map: ${onMap.CustomOverlay}`);
+
+// 운행을 쉬는 중(대기 / 최근 위치 아님)이면 화살표는 지우고 버스 표시만 남는다
+updateBusMarkers([{ busId: 'B', latitude: -0.5, longitude: 0, isRecent: true, status: 'waiting' }]);
+assert.equal(onMap.CustomOverlay, 1);
+updateBusMarkers([{ busId: 'B', latitude: -0.5, longitude: 0, isRecent: false }]);
+assert.equal(onMap.CustomOverlay, 1);
 
 console.log('map_html_check: all ok');

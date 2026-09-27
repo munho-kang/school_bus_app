@@ -279,7 +279,7 @@ function arrowHtml(color, bearing, faded) {
 // 버스 현 위치 앞·뒤로 ARROW_COUNT개씩 진행 방향 화살표를 그린다
 function drawBusArrows(busId, pos, bus) {
   var bd = mapBusMarkers[busId], path = routePaths[busId];
-  if (!path) return;
+  if (!path || !bus.isRecent || bus.status === 'waiting') return;   // 운행 쉬는 중(대기·다음 출발 전)엔 화살표 없음
   var prj = locateBus(bd, path, [pos.getLng(), pos.getLat()], bus.station, bus.nextStation);
   if (prj.dist > 80) return;   // 경로에서 너무 멀면(위치 없음 등) 그리지 않음
   var color = busId === 'A' ? '#0066FF' : '#00CC66';

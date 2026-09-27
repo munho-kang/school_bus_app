@@ -12,14 +12,19 @@ import 'notice_page.dart';
 import 'schedule_page.dart';
 import 'surface_native.dart' if (dart.library.js_interop) 'surface_web.dart';
 
-/// 코스 줄 오른쪽 문구. 2분 안이면 '곧 출발', 한 시간이 넘게 남은 그날 첫차는 '첫차'.
-String waitText(String busId, DateTime now) {
+/// 다음 정문 출발까지 남은 분. 오늘 막차가 지났으면 null.
+int? minutesLeft(String busId, DateTime now) {
   final String? t = nextDeparture(busId, now);
-  if (t == null) return '운행 종료';
-  final int mins = int.parse(t.substring(0, 2)) * 60 + int.parse(t.substring(3)) - (now.hour * 60 + now.minute);
-  if (mins <= 2) return '곧 출발';
+  if (t == null) return null;
+  return int.parse(t.substring(0, 2)) * 60 + int.parse(t.substring(3)) - (now.hour * 60 + now.minute);
+}
+
+/// 코스 줄 오른쪽 문구. 한 시간이 넘게 남은 그날 첫차는 '첫차'. (5분 안이면 줄 앞에 빨간 '(곧 출발)'이 붙는다.)
+String waitText(String busId, DateTime now) {
+  final int? mins = minutesLeft(busId, now);
+  if (mins == null) return '운행 종료';
   if (mins < 60) return '$mins분 후';
-  if (t == departures[busId]!.first) return '첫차';
+  if (nextDeparture(busId, now) == departures[busId]!.first) return '첫차';
   return mins % 60 == 0 ? '${mins ~/ 60}시간 후' : '${mins ~/ 60}시간 ${mins % 60}분 후';
 }
 
@@ -102,10 +107,6 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(height: 20),
                   _DepartureHero(now: _now, onTap: _openMap),
                   const SizedBox(height: 28),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4, bottom: 12),
-                    child: Text('바로가기', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                  ),
                   AppCard(
                     padding: EdgeInsets.zero,
                     child: Column(
@@ -152,7 +153,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 /// 정문 출발 카드: 머리줄(정문 출발 · 현재 시각), 코스별 다음 출발, 맨 아래 지도 열기.
-/// 색이 상태를 말한다 — 곧 출발하는 코스가 있으면 빨강, 둘 다 운행 종료면 회색, 그 밖엔 초록.
+/// 색이 상태를 말한다 — 둘 다 운행 종료면 회색, 그 밖엔 초록.
 class _DepartureHero extends StatelessWidget {
   const _DepartureHero({required this.now, required this.onTap});
 
@@ -163,11 +164,7 @@ class _DepartureHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final String clock = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final List<String> waits = <String>[waitText('A', now), waitText('B', now)];
-    final HeroTone tone = waits.contains('곧 출발')
-        ? HeroTone.soon
-        : waits.every((String w) => w == '운행 종료')
-            ? HeroTone.off
-            : HeroTone.live;
+    final HeroTone tone = waits.every((String w) => w == '운행 종료') ? HeroTone.off : HeroTone.live;
     const TextStyle head = TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white70);
     return HeroCard(
       tone: tone,
@@ -218,6 +215,7 @@ class _CourseRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? t = nextDeparture(id, now);
+    final int? mins = minutesLeft(id, now);
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
       decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(14)),
@@ -240,7 +238,17 @@ class _CourseRow extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerRight,
-              child: Text(wait, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+              // '(곧 출발)'은 빨간색, 두께는 맨 위 날짜 글자와 같은 보통 두께.
+              child: Text.rich(
+                TextSpan(
+                  children: <InlineSpan>[
+                    if (mins != null && mins <= 5)
+                      const TextSpan(text: '(곧 출발) ', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w400)),
+                    TextSpan(text: wait),
+                  ],
+                ),
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              ),
             ),
           ),
         ],

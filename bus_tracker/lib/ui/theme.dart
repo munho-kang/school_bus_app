@@ -19,7 +19,6 @@ abstract final class AppColors {
   static const Color onPrimaryTint = Color(0xFF0A7A55);
 
   static const Color danger = Color(0xFFE5323F);
-  static const Color dangerLight = Color(0xFFF25A66);
   static const Color dangerTint = Color(0xFFFDECEE);
 
   static const Color mutedStart = Color(0xFF6B7684);
@@ -179,11 +178,10 @@ class AppCard extends StatelessWidget {
   }
 }
 
-enum HeroTone { live, soon, off }
+enum HeroTone { live, off }
 
 const Map<HeroTone, List<Color>> _heroColors = <HeroTone, List<Color>>{
   HeroTone.live: <Color>[AppColors.primaryLight, AppColors.primary],
-  HeroTone.soon: <Color>[AppColors.dangerLight, AppColors.danger],
   HeroTone.off: <Color>[AppColors.mutedStart, AppColors.mutedEnd],
 };
 
@@ -193,7 +191,7 @@ Widget _bubble(double size, double alpha) => Container(
       decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: alpha)),
     );
 
-/// 상태를 색으로 말하는 그라데이션 카드(운행 중 초록 · 곧 출발 빨강 · 운행 종료 회색). 안의 글씨·아이콘은 흰색.
+/// 상태를 색으로 말하는 그라데이션 카드(운행 중 초록 · 운행 종료 회색). 안의 글씨·아이콘은 흰색.
 /// 홈 카드와 지도 상단 패널이 같은 Hero('board')라, 누르면 카드가 그대로 지도 위로 옮겨 간다 — 한 화면에 하나만 둔다.
 class HeroCard extends StatelessWidget {
   const HeroCard({
