@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bus_tracker/main.dart';
 import 'package:bus_tracker/models/bus.dart';
 import 'package:bus_tracker/services/bus_service.dart';
@@ -11,12 +12,14 @@ import 'package:bus_tracker/ui/theme.dart';
 
 void main() {
   testWidgets('첫 화면에 버튼이 있고 지도는 없음', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
     await tester.pumpWidget(ChangeNotifierProvider<BusService>(create: (_) => BusService(), child: const MyApp()));
     expect(find.text('포털 접속하기'), findsOneWidget);
     expect(find.text('실시간 버스 보기'), findsOneWidget);
     expect(find.text('학사일정'), findsOneWidget);
     expect(find.text('공지사항'), findsOneWidget);
     expect(find.text('학식 메뉴'), findsOneWidget);
+    expect(find.text('내 시간표'), findsOneWidget);
     expect(find.text('제주대 순환버스'), findsNothing);
     expect(find.byType(MapView), findsNothing);
   });

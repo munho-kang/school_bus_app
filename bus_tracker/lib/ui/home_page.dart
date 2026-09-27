@@ -1,4 +1,4 @@
-// 앱 첫 화면. 위는 그라데이션 히어로 카드(A·B 코스 정문 다음 출발, 누르면 실시간 지도), 아래는 포털·학사일정·공지사항·학식 바로가기 카드.
+// 앱 첫 화면. 위는 그라데이션 히어로 카드(A·B 코스 정문 다음 출발, 누르면 실시간 지도), 그 아래 내 시간표, 맨 아래는 포털·학사일정·공지사항·학식 바로가기 카드.
 // 포털은 학교 포털을(웹에선 새 탭으로), 나머지는 각 화면을 띄운다.
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -11,6 +11,7 @@ import 'map_view.dart';
 import 'menu_page.dart';
 import 'notice_page.dart';
 import 'schedule_page.dart';
+import 'timetable.dart';
 import 'surface_native.dart' if (dart.library.js_interop) 'surface_web.dart';
 
 /// 다음 정문 출발까지 남은 분. 오늘 막차가 지났으면 null.
@@ -110,7 +111,9 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 20),
                   _DepartureHero(now: _now, onTap: _openMap),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 16),
+                  TimetableCard(now: _now),
+                  const SizedBox(height: 16),
                   AppCard(
                     padding: EdgeInsets.zero,
                     child: Column(
