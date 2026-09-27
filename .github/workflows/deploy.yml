@@ -33,6 +33,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter test
+      - run: node test/map_html_check.mjs
       - run: flutter build web --release --base-href /school_bus_app/
       - uses: actions/upload-pages-artifact@v3
         with:

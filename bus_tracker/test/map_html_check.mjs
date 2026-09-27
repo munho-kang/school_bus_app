@@ -19,6 +19,9 @@ const { distM, bearingDeg, splitRoute, makePath, projectOnPath, pointAt, buildRo
   src + '; mapKakaoMap = {}; return { distM, bearingDeg, splitRoute, makePath, projectOnPath, pointAt, buildRoutePaths, routePaths, updateBusMarkers, stationAlongs, legWindow, locateBus };',
 )(...Object.values(sandbox));
 
+// 웹은 srcdoc iframe(location.protocol = 'about:')이라 카카오 SDK가 http로 지도를 부른다 → https 페이지에서 차단됨. 자동 https 승격이 있어야 한다.
+assert.match(html, /<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">/);
+
 const near = (a, b, tol = 1) => assert.ok(Math.abs(a - b) <= tol, `${a} ≠ ${b}`);
 const LAT = 33.45, mPerLat = 110540, mPerLng = 111320 * Math.cos(LAT * Math.PI / 180);
 

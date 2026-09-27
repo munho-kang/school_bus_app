@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<!-- 웹(srcdoc iframe)에선 location.protocol이 about:라 카카오 SDK가 http로 지도를 부른다. https 페이지에서 막히지 않게 자동으로 https로 바꾼다. -->
+<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>제주대학교 순환버스</title>
 <style>
