@@ -19,7 +19,7 @@ int? minutesLeft(String busId, DateTime now) {
   return int.parse(t.substring(0, 2)) * 60 + int.parse(t.substring(3)) - (now.hour * 60 + now.minute);
 }
 
-/// 코스 줄 오른쪽 문구. 한 시간이 넘게 남은 그날 첫차는 '첫차'. (5분 안이면 줄 앞에 빨간 '(곧 출발)'이 붙는다.)
+/// 코스 줄 오른쪽 문구. 한 시간이 넘게 남은 그날 첫차는 '첫차'. (5분 안이면 앞에 '곧 출발' 칩이 붙는다.)
 String waitText(String busId, DateTime now) {
   final int? mins = minutesLeft(busId, now);
   if (mins == null) return '운행 종료';
@@ -238,16 +238,16 @@ class _CourseRow extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerRight,
-              // '(곧 출발)'은 빨간색, 두께는 맨 위 날짜 글자와 같은 보통 두께.
-              child: Text.rich(
-                TextSpan(
-                  children: <InlineSpan>[
-                    if (mins != null && mins <= 5)
-                      const TextSpan(text: '(곧 출발) ', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w400)),
-                    TextSpan(text: wait),
+              // 5분 안이면 앞에 흰 바탕 빨간 글씨 '곧 출발' 칩.
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (mins != null && mins <= 5) ...<Widget>[
+                    const Pill('곧 출발', bg: Colors.white, fg: AppColors.danger),
+                    const SizedBox(width: 8),
                   ],
-                ),
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                  Text(wait, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                ],
               ),
             ),
           ),
