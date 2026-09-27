@@ -1,4 +1,4 @@
-// 앱 첫 화면. 위는 그라데이션 히어로 카드(A·B 코스 정문 다음 출발, 누르면 실시간 지도), 그 아래 내 시간표, 맨 아래는 포털·학사일정·공지사항·학식 바로가기 카드.
+// 앱 첫 화면. 위는 내 시간표(메인), 그 아래 작은 그라데이션 히어로 카드(A·B 코스 정문 다음 출발, 누르면 실시간 지도), 맨 아래는 포털·학사일정·공지사항·학식 바로가기 카드.
 // 포털은 학교 포털을(웹에선 새 탭으로), 나머지는 각 화면을 띄운다.
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -110,9 +110,9 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _DepartureHero(now: _now, onTap: _openMap),
-                  const SizedBox(height: 16),
                   TimetableCard(now: _now),
+                  const SizedBox(height: 16),
+                  _DepartureHero(now: _now, onTap: _openMap),
                   const SizedBox(height: 16),
                   AppCard(
                     padding: EdgeInsets.zero,
@@ -177,6 +177,7 @@ class _DepartureHero extends StatelessWidget {
     return HeroCard(
       tone: tone,
       onTap: onTap,
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -189,17 +190,17 @@ class _DepartureHero extends StatelessWidget {
               Text(clock, style: head.copyWith(fontFeatures: const <FontFeature>[FontFeature.tabularFigures()])),
             ],
           ),
-          const SizedBox(height: 16),
-          _CourseRow(id: 'A', now: now, bus: svc.busA, wait: waits[0]),
           const SizedBox(height: 10),
+          _CourseRow(id: 'A', now: now, bus: svc.busA, wait: waits[0]),
+          const SizedBox(height: 6),
           _CourseRow(id: 'B', now: now, bus: svc.busB, wait: waits[1]),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+            padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
             decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(14)),
             child: const Row(
               children: <Widget>[
-                Text('실시간 버스 보기', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                Text('실시간 버스 보기', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                 Spacer(),
                 Icon(Icons.map_outlined, size: 20),
                 SizedBox(width: 2),
@@ -226,16 +227,16 @@ class _CourseRow extends StatelessWidget {
     final String? t = nextDeparture(id, now, bus);
     final int? mins = minutesLeft(id, now, bus);
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
+      padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
       decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(14)),
       child: Row(
         children: <Widget>[
-          CourseBadge(id, size: 32),
-          const SizedBox(width: 14),
+          CourseBadge(id, size: 26),
+          const SizedBox(width: 12),
           Text(
             t ?? '--:--',
             style: TextStyle(
-              fontSize: 26,
+              fontSize: 21,
               fontWeight: FontWeight.w700,
               color: t == null ? Colors.white60 : Colors.white,
               fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
@@ -255,7 +256,7 @@ class _CourseRow extends StatelessWidget {
                     const Pill('곧 출발', bg: Colors.white, fg: AppColors.danger),
                     const SizedBox(width: 8),
                   ],
-                  Text(wait, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                  Text(wait, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 ],
               ),
             ),

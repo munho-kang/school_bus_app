@@ -1,6 +1,8 @@
 // 내 수업 시간표. 홈 화면에 월~금 일주일 표로 보여주고, 빈 곳의 '추가'나 수업 칸을 눌러 넣고·고치고·지운다.
 // 이 기기(휴대폰 앱 또는 웹 브라우저)에만 저장된다 — 다른 사람에겐 보이지 않는다.
 import 'dart:convert';
+import 'dart:math';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme.dart';
@@ -10,30 +12,26 @@ const String _week = '월화수목금';
 
 /// 수업 하나. days는 1=월 … 5=금, 시각은 자정부터 센 분(10:30 → 630).
 class Lesson {
-  const Lesson({required this.title, required this.room, required this.days, required this.start, required this.end});
+  const Lesson({required this.title, required this.days, required this.start, required this.end});
 
   final String title;
-  final String room;
   final List<int> days;
   final int start;
   final int end;
 
-  Map<String, Object> toJson() => <String, Object>{'title': title, 'room': room, 'days': days, 'start': start, 'end': end};
+  Map<String, Object> toJson() => <String, Object>{'title': title, 'days': days, 'start': start, 'end': end};
 
   factory Lesson.fromJson(Map<String, dynamic> j) => Lesson(
-        title: j['title'] as String,
-        room: j['room'] as String,
-        days: List<int>.from(j['days'] as List<dynamic>),
-        start: j['start'] as int,
-        end: j['end'] as int,
-      );
+    title: j['title'] as String,
+    days: List<int>.from(j['days'] as List<dynamic>),
+    start: j['start'] as int,
+    end: j['end'] as int,
+  );
 }
 
 String encodeLessons(List<Lesson> ls) => jsonEncode(ls.map((Lesson l) => l.toJson()).toList());
 List<Lesson> decodeLessons(String s) =>
     (jsonDecode(s) as List<dynamic>).map((dynamic j) => Lesson.fromJson(j as Map<String, dynamic>)).toList();
-
-String hhmm(int m) => '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
 
 /// 표에 그릴 시간 범위(정시 단위). 가장 이른 수업의 시작 시(時)부터 가장 늦은 수업이 끝나는 시까지.
 (int, int) hourRange(List<Lesson> ls) {
@@ -114,7 +112,11 @@ class _TimetableCardState extends State<TimetableCard> {
               const Text('내 시간표', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
               const Spacer(),
               Pressable(
-                child: TextButton.icon(onPressed: _edit, icon: const Icon(Icons.add, size: 20), label: const Text('추가')),
+                child: TextButton.icon(
+                  onPressed: _edit,
+                  icon: const Icon(Icons.add, size: 20),
+                  label: const Text('추가'),
+                ),
               ),
             ],
           ),
@@ -137,7 +139,7 @@ class _TimetableCardState extends State<TimetableCard> {
 }
 
 // 시트에서 '삭제'를 눌렀다는 표시로만 쓰는 값.
-const Lesson _deleted = Lesson(title: '', room: '', days: <int>[], start: 0, end: 0);
+const Lesson _deleted = Lesson(title: '', days: <int>[], start: 0, end: 0);
 
 /// 월~금 칸에 수업을 시간 비율대로 놓는다. 오늘 요일 머리글은 초록.
 class _Grid extends StatelessWidget {
@@ -154,51 +156,53 @@ class _Grid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (int first, int last) = hourRange(lessons);
-    return LayoutBuilder(builder: (BuildContext context, BoxConstraints c) {
-      final double colW = (c.maxWidth - _labelW) / 5;
-      double y(int minute) => _headH + (minute - first * 60) / 60 * _hourH;
-      return SizedBox(
-        height: _headH + (last - first) * _hourH,
-        child: Stack(
-          children: <Widget>[
-            for (int d = 1; d <= 5; d++)
-              Positioned(
-                left: _labelW + (d - 1) * colW,
-                width: colW,
-                top: 0,
-                height: _headH,
-                child: Center(
-                  child: Text(
-                    _week[d - 1],
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: d == today ? AppColors.primary : AppColors.textSub,
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints c) {
+        final double colW = (c.maxWidth - _labelW) / 5;
+        double y(int minute) => _headH + (minute - first * 60) / 60 * _hourH;
+        return SizedBox(
+          height: _headH + (last - first) * _hourH,
+          child: Stack(
+            children: <Widget>[
+              for (int d = 1; d <= 5; d++)
+                Positioned(
+                  left: _labelW + (d - 1) * colW,
+                  width: colW,
+                  top: 0,
+                  height: _headH,
+                  child: Center(
+                    child: Text(
+                      _week[d - 1],
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: d == today ? AppColors.primary : AppColors.textSub,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            for (int h = first; h < last; h++) ...<Widget>[
-              Positioned(left: _labelW, right: 0, top: y(h * 60), child: const Divider()),
-              Positioned(
-                left: 0,
-                top: y(h * 60) + 3,
-                child: Text('$h', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-              ),
-            ],
-            for (final Lesson l in lessons)
-              for (final int d in l.days)
+              for (int h = first; h < last; h++) ...<Widget>[
+                Positioned(left: _labelW, right: 0, top: y(h * 60), child: const Divider()),
                 Positioned(
-                  left: _labelW + (d - 1) * colW + 1.5,
-                  width: colW - 3,
-                  top: y(l.start) + 1.5,
-                  height: y(l.end) - y(l.start) - 3,
-                  child: _Block(lesson: l, colors: _palette[colorIndex(lessons, l.title)], onTap: () => onTap(l)),
+                  left: 0,
+                  top: y(h * 60) + 3,
+                  child: Text('$h', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 ),
-          ],
-        ),
-      );
-    });
+              ],
+              for (final Lesson l in lessons)
+                for (final int d in l.days)
+                  Positioned(
+                    left: _labelW + (d - 1) * colW + 1.5,
+                    width: colW - 3,
+                    top: y(l.start) + 1.5,
+                    height: y(l.end) - y(l.start) - 3,
+                    child: _Block(lesson: l, colors: _palette[colorIndex(lessons, l.title)], onTap: () => onTap(l)),
+                  ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -221,23 +225,11 @@ class _Block extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  lesson.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg, height: 1.25),
-                ),
-                if (lesson.room.isNotEmpty)
-                  Text(
-                    lesson.room,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 10.5, color: fg.withValues(alpha: 0.8)),
-                  ),
-              ],
+            child: Text(
+              lesson.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg, height: 1.25),
             ),
           ),
         ),
@@ -258,15 +250,16 @@ class _LessonSheet extends StatefulWidget {
 
 class _LessonSheetState extends State<_LessonSheet> {
   late final TextEditingController _title = TextEditingController(text: widget.old?.title);
-  late final TextEditingController _room = TextEditingController(text: widget.old?.room);
   late final Set<int> _days = <int>{...?widget.old?.days};
-  late int _start = widget.old?.start ?? 9 * 60;
-  late int _end = widget.old?.end ?? 10 * 60 + 15;
+  // 바퀴가 30분 단위라 예전에 넣은 10:15 같은 시각은 10:00으로 맞춰 보여준다.
+  late int _start = _snap(widget.old?.start ?? 9 * 60);
+  late int _end = _snap(widget.old?.end ?? 11 * 60);
+
+  static int _snap(int m) => m - m % 30;
 
   @override
   void dispose() {
     _title.dispose();
-    _room.dispose();
     super.dispose();
   }
 
@@ -277,12 +270,22 @@ class _LessonSheetState extends State<_LessonSheet> {
     return null;
   }
 
-  Future<void> _pick(bool isStart) async {
-    final int m = isStart ? _start : _end;
-    final TimeOfDay? t = await showTimePicker(context: context, initialTime: TimeOfDay(hour: m ~/ 60, minute: m % 60));
-    if (t == null) return;
-    setState(() => isStart ? _start = t.hour * 60 + t.minute : _end = t.hour * 60 + t.minute);
-  }
+  // 알람 앱처럼 위아래로 굴려 맞추는 시각 바퀴(30분 간격).
+  Widget _wheel(String label, int m, ValueChanged<int> onChanged) => Column(
+    children: <Widget>[
+      Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSub)),
+      SizedBox(
+        height: 140,
+        child: CupertinoDatePicker(
+          mode: CupertinoDatePickerMode.time,
+          use24hFormat: true,
+          minuteInterval: 30,
+          initialDateTime: DateTime(2000, 1, 1, m ~/ 60, m % 60),
+          onDateTimeChanged: (DateTime t) => onChanged(t.hour * 60 + t.minute),
+        ),
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -293,17 +296,15 @@ class _LessonSheetState extends State<_LessonSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(widget.old == null ? '수업 추가' : '수업 고치기', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          Text(
+            widget.old == null ? '수업 추가' : '수업 고치기',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 16),
           TextField(
             controller: _title,
             decoration: const InputDecoration(labelText: '과목', border: OutlineInputBorder()),
             onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _room,
-            decoration: const InputDecoration(labelText: '강의실 (선택)', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -322,14 +323,34 @@ class _LessonSheetState extends State<_LessonSheet> {
           const SizedBox(height: 16),
           Row(
             children: <Widget>[
-              Expanded(child: Pressable(child: OutlinedButton(onPressed: () => _pick(true), child: Text(hhmm(_start))))),
-              const Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('~')),
-              Expanded(child: Pressable(child: OutlinedButton(onPressed: () => _pick(false), child: Text(hhmm(_end))))),
+              // 시작을 바꾸면 끝은 2시간 뒤로 따라온다(23:30을 넘지 않게). 끝을 바꿔도 시작은 그대로.
+              Expanded(
+                child: _wheel(
+                  '시작',
+                  _start,
+                  (int m) => setState(() {
+                    _start = m;
+                    _end = min(m + 120, 23 * 60 + 30);
+                  }),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // 시작이 바뀔 때마다 새로 그려야 끝 바퀴가 따라 돌아간다.
+              Expanded(
+                child: KeyedSubtree(
+                  key: ValueKey<int>(_start),
+                  child: _wheel('끝', _end, (int m) => setState(() => _end = m)),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           if (problem != null)
-            Text(problem, style: const TextStyle(fontSize: 13, color: AppColors.textSub), textAlign: TextAlign.center),
+            Text(
+              problem,
+              style: const TextStyle(fontSize: 13, color: AppColors.textSub),
+              textAlign: TextAlign.center,
+            ),
           const SizedBox(height: 12),
           Row(
             children: <Widget>[
@@ -354,15 +375,9 @@ class _LessonSheetState extends State<_LessonSheet> {
                     onPressed: problem != null
                         ? null
                         : () => Navigator.pop(
-                              context,
-                              Lesson(
-                                title: _title.text.trim(),
-                                room: _room.text.trim(),
-                                days: (_days.toList()..sort()),
-                                start: _start,
-                                end: _end,
-                              ),
-                            ),
+                            context,
+                            Lesson(title: _title.text.trim(), days: (_days.toList()..sort()), start: _start, end: _end),
+                          ),
                     child: const Text('저장'),
                   ),
                 ),
