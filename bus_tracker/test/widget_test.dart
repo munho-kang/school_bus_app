@@ -16,4 +16,16 @@ void main() {
   test('B 코스는 B 시간표', () => expect(nextDepartureText('B', DateTime(2026, 9, 25, 11, 31)), '다음 출발 12:50'));
   test('막차 이후 → 운행 종료', () => expect(nextDepartureText('A', DateTime(2026, 9, 25, 18, 41)), '오늘 운행 종료'));
   test('시간표 23회', () => expect(departures.values.map((List<String> l) => l.length), <int>[23, 23]));
+
+  // 08:45 출발편 기준. 늦게 떠나면 그 편을 붙잡고, 떠났거나 너무 늦으면 넘어간다.
+  test('실제 출발 기준 다음 편', () {
+    final Bus gate = bus(station: '정문', status: 'waiting');
+    expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 47)), '09:30'); // 위치 모름 → 시간표대로
+    expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 47), gate), '08:45'); // 아직 정문 → 그대로
+    expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 47), bus(station: '약대', status: 'running')), '09:30'); // 떠남
+    expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 51), gate), '09:30'); // 5분 넘게 늦음 → 안전장치
+    expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 47), bus(station: '정문', status: 'waiting', recent: false)), '09:30');
+    expect(departingNow(DateTime(2026, 9, 28, 8, 47)), isTrue);
+    expect(departingNow(DateTime(2026, 9, 28, 9, 0)), isFalse);
+  });
 }

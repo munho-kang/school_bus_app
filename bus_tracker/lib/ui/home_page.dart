@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/academic_schedule.dart';
+import '../models/bus.dart';
 import '../services/bus_service.dart';
 import 'theme.dart';
 import 'map_view.dart';
@@ -13,16 +14,17 @@ import 'schedule_page.dart';
 import 'surface_native.dart' if (dart.library.js_interop) 'surface_web.dart';
 
 /// 다음 정문 출발까지 남은 분. 오늘 막차가 지났으면 null.
-int? minutesLeft(String busId, DateTime now) {
-  final String? t = nextDeparture(busId, now);
-  if (t == null) return null;
-  return int.parse(t.substring(0, 2)) * 60 + int.parse(t.substring(3)) - (now.hour * 60 + now.minute);
+/// 버스가 정문에서 늦게 떠나는 중이면 음수.
+int? minutesLeft(String busId, DateTime now, [Bus? bus]) {
+  final String? t = nextDeparture(busId, now, bus);
+  return t == null ? null : minutesUntil(t, now);
 }
 
 /// 코스 줄 오른쪽 문구. 한 시간이 넘게 남은 그날 첫차는 '첫차'. (5분 안이면 앞에 '곧 출발' 칩이 붙는다.)
-String waitText(String busId, DateTime now) {
-  final int? mins = minutesLeft(busId, now);
+String waitText(String busId, DateTime now, [Bus? bus]) {
+  final int? mins = minutesLeft(busId, now, bus);
   if (mins == null) return '운행 종료';
+  if (mins < 0) return '${-mins}분 지연';
   if (mins < 60) return '$mins분 후';
   if (nextDeparture(busId, now) == departures[busId]!.first) return '첫차';
   return mins % 60 == 0 ? '${mins ~/ 60}시간 후' : '${mins ~/ 60}시간 ${mins % 60}분 후';
@@ -53,8 +55,10 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     // 카드 시계와 '몇 분 후'를 갱신한다. 분이 바뀔 때만 다시 그린다.
+    // 출발 시각 전후 몇 분 동안만 실제 위치를 받아, 버스가 정문을 떠났는지 확인한다.
     _tick = Timer.periodic(const Duration(seconds: 5), (_) {
       final DateTime n = DateTime.now();
+      if (departingNow(n)) context.read<BusService>().fetchNow();
       if (n.minute != _now.minute) setState(() => _now = n);
     });
   }
@@ -163,7 +167,8 @@ class _DepartureHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String clock = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    final List<String> waits = <String>[waitText('A', now), waitText('B', now)];
+    final BusService svc = context.watch<BusService>();
+    final List<String> waits = <String>[waitText('A', now, svc.busA), waitText('B', now, svc.busB)];
     final HeroTone tone = waits.every((String w) => w == '운행 종료') ? HeroTone.off : HeroTone.live;
     const TextStyle head = TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white70);
     return HeroCard(
@@ -182,9 +187,9 @@ class _DepartureHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _CourseRow(id: 'A', now: now, wait: waits[0]),
+          _CourseRow(id: 'A', now: now, bus: svc.busA, wait: waits[0]),
           const SizedBox(height: 10),
-          _CourseRow(id: 'B', now: now, wait: waits[1]),
+          _CourseRow(id: 'B', now: now, bus: svc.busB, wait: waits[1]),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
@@ -206,16 +211,17 @@ class _DepartureHero extends StatelessWidget {
 }
 
 class _CourseRow extends StatelessWidget {
-  const _CourseRow({required this.id, required this.now, required this.wait});
+  const _CourseRow({required this.id, required this.now, required this.bus, required this.wait});
 
   final String id;
   final DateTime now;
+  final Bus? bus;
   final String wait;
 
   @override
   Widget build(BuildContext context) {
-    final String? t = nextDeparture(id, now);
-    final int? mins = minutesLeft(id, now);
+    final String? t = nextDeparture(id, now, bus);
+    final int? mins = minutesLeft(id, now, bus);
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
       decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(14)),

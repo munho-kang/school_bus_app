@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:bus_tracker/main.dart';
+import 'package:bus_tracker/models/bus.dart';
 import 'package:bus_tracker/services/bus_service.dart';
 import 'package:bus_tracker/ui/home_page.dart';
 import 'package:bus_tracker/ui/map_view.dart';
@@ -44,6 +45,10 @@ void main() {
   });
   test('안내판: 몇 분 후', () => expect(waitText('B', DateTime(2026, 9, 28, 8, 0)), '10분 후'));
   test('안내판: 낮 공백은 시간·분', () => expect(waitText('A', DateTime(2026, 9, 28, 11, 21)), '1시간 19분 후'));
+  test('안내판: 정문에서 늦게 떠나면 몇 분 지연', () {
+    final Bus gate = Bus(busId: 'A', latitude: 0, longitude: 0, station: '정문', status: 'waiting', isRecent: true);
+    expect(waitText('A', DateTime(2026, 9, 28, 8, 47), gate), '2분 지연');
+  });
   test('안내판: 막차 뒤 운행 종료', () => expect(waitText('B', DateTime(2026, 9, 28, 19, 0)), '운행 종료'));
   test('홈 학사일정 줄: 가장 가까운 남은 일정', () => expect(nextScheduleText(DateTime(2026, 9, 27)), startsWith('진행 중 · ')));
   test('홈 학사일정 줄: 다른 해면 표시 안 함', () => expect(nextScheduleText(DateTime(2027, 3, 1)), isNull));

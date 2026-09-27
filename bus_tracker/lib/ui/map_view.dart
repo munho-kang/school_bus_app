@@ -64,14 +64,32 @@ const Map<String, List<String>> departures = <String, List<String>>{
   ],
 };
 
+/// 출발 시각이 지나도 버스가 정문에 서 있으면 이만큼(분)까지는 그 편을 계속 보여준다.
+/// 위치가 끊기거나 늦게 들어와도 이 시간이 지나면 시간표대로 넘어간다.
+const int lateGrace = 5;
+
+/// 실시간 위치로 볼 때 정문에서 출발을 기다리는 중인지.
+bool atGate(Bus? bus) => bus?.isRecent == true && bus!.station == '정문' && bus.status == 'waiting';
+
+/// 출발 시각까지 남은 분('08:45'). 이미 지났으면 음수.
+int minutesUntil(String t, DateTime now) =>
+    int.parse(t.substring(0, 2)) * 60 + int.parse(t.substring(3)) - (now.hour * 60 + now.minute);
+
 /// 다음 정문 출발 시각('08:45'). 오늘 막차가 지났으면 null.
-String? nextDeparture(String busId, DateTime now) {
-  final String hhmm = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+/// 시각이 지났어도 버스가 아직 정문에 서 있으면(최대 [lateGrace]분) 그 편을 그대로 둔다.
+String? nextDeparture(String busId, DateTime now, [Bus? bus]) {
+  final bool waiting = atGate(bus);
   for (final String t in departures[busId] ?? const <String>[]) {
-    if (t.compareTo(hhmm) >= 0) return t;
+    final int d = minutesUntil(t, now);
+    if (d >= 0 || (waiting && d >= -lateGrace)) return t;
   }
   return null;
 }
+
+/// 방금 출발 시각이 된(또는 지난 지 [lateGrace]분 안인) 편이 있는지. 이때만 실제 위치를 확인하면 된다.
+bool departingNow(DateTime now) => departures.values.any(
+  (List<String> ts) => ts.any((String t) => minutesUntil(t, now) <= 0 && minutesUntil(t, now) >= -lateGrace),
+);
 
 /// 운행 중이 아닐 때 보여줄 다음 정문 출발 시각. 막차가 지났으면 운행 종료.
 String nextDepartureText(String busId, DateTime now) {
