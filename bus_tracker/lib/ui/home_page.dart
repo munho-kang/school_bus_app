@@ -1,4 +1,5 @@
-// 앱 첫 화면. 위는 내 시간표(메인), 그 아래 작은 그라데이션 히어로 카드(A·B 코스 정문 다음 출발, 누르면 실시간 지도), 맨 아래는 포털·학사일정·공지사항·학식 바로가기 카드.
+// 앱 첫 화면. 위는 내 시간표(메인), 그 아래 작은 그라데이션 히어로 카드(A·B 코스 정문 다음 출발, 누르면 실시간 지도).
+// 포털·학사일정·공지사항·학식 바로가기는 오른쪽 위 ≡ 버튼으로 펼치는 서랍 안에 있다.
 // 포털은 학교 포털을(웹에선 새 탭으로), 나머지는 각 화면을 띄운다.
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -79,10 +80,62 @@ class _HomePageState extends State<HomePage> {
 
   void _push(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
 
+  // 서랍을 닫고 나서 이동한다(돌아왔을 때 서랍이 열려 있지 않게).
+  void _fromDrawer(VoidCallback go) {
+    Navigator.of(context).pop();
+    go();
+  }
+
   @override
   Widget build(BuildContext context) {
     const String week = '월화수목금토일';
     return Scaffold(
+      // 오른쪽 위 ≡ 버튼을 누르면 오른쪽에서 펼쳐지는 바로가기 서랍.
+      endDrawer: Drawer(
+        backgroundColor: AppColors.bg,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: <Widget>[
+              AppCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: <Widget>[
+                    _MenuRow(
+                      icon: Icons.school_outlined,
+                      title: '포털 접속하기',
+                      subtitle: 'jnuclass.jejunu.ac.kr',
+                      external: true,
+                      onTap: () => _fromDrawer(() => openPortal(context, 'https://jnuclass.jejunu.ac.kr/')),
+                    ),
+                    const Divider(indent: 72, endIndent: 16),
+                    _MenuRow(
+                      icon: Icons.event_note_outlined,
+                      title: '학사일정',
+                      subtitle: nextScheduleText(_now) ?? '$scheduleYear학년도 학사일정',
+                      onTap: () => _fromDrawer(() => _push(const SchedulePage())),
+                    ),
+                    const Divider(indent: 72, endIndent: 16),
+                    _MenuRow(
+                      icon: Icons.campaign_outlined,
+                      title: '공지사항',
+                      subtitle: '학사 · 장학 · 행사 공지',
+                      onTap: () => _fromDrawer(() => _push(const NoticePage())),
+                    ),
+                    const Divider(indent: 72, endIndent: 16),
+                    _MenuRow(
+                      icon: Icons.restaurant_outlined,
+                      title: '학식 메뉴',
+                      subtitle: '식당 5곳 · 이번 주 식단',
+                      onTap: () => _fromDrawer(() => _push(const MenuPage())),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
       body: SafeArea(
         // 휴대폰에선 카드를 맨 위에, 넓은 화면(웹)에선 가운데에.
         child: Align(
@@ -96,16 +149,32 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Row(
                       children: <Widget>[
-                        Text(
-                          '${_now.month}월 ${_now.day}일 ${week[_now.weekday - 1]}요일',
-                          style: const TextStyle(fontSize: 15, color: AppColors.textSub),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                '${_now.month}월 ${_now.day}일 ${week[_now.weekday - 1]}요일',
+                                style: const TextStyle(fontSize: 15, color: AppColors.textSub),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text('제주대 캠퍼스', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        const Text('제주대 캠퍼스', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
+                        Builder(
+                          builder: (BuildContext ctx) => Pressable(
+                            scale: 0.9,
+                            child: IconButton(
+                              icon: const Icon(Icons.menu, size: 28),
+                              tooltip: '메뉴',
+                              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -113,42 +182,6 @@ class _HomePageState extends State<HomePage> {
                   TimetableCard(now: _now),
                   const SizedBox(height: 16),
                   _DepartureHero(now: _now, onTap: _openMap),
-                  const SizedBox(height: 16),
-                  AppCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      children: <Widget>[
-                        _MenuRow(
-                          icon: Icons.school_outlined,
-                          title: '포털 접속하기',
-                          subtitle: 'jnuclass.jejunu.ac.kr',
-                          external: true,
-                          onTap: () => openPortal(context, 'https://jnuclass.jejunu.ac.kr/'),
-                        ),
-                        const Divider(indent: 72, endIndent: 16),
-                        _MenuRow(
-                          icon: Icons.event_note_outlined,
-                          title: '학사일정',
-                          subtitle: nextScheduleText(_now) ?? '$scheduleYear학년도 학사일정',
-                          onTap: () => _push(const SchedulePage()),
-                        ),
-                        const Divider(indent: 72, endIndent: 16),
-                        _MenuRow(
-                          icon: Icons.campaign_outlined,
-                          title: '공지사항',
-                          subtitle: '학사 · 장학 · 행사 공지',
-                          onTap: () => _push(const NoticePage()),
-                        ),
-                        const Divider(indent: 72, endIndent: 16),
-                        _MenuRow(
-                          icon: Icons.restaurant_outlined,
-                          title: '학식 메뉴',
-                          subtitle: '식당 5곳 · 이번 주 식단',
-                          onTap: () => _push(const MenuPage()),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),

@@ -1,4 +1,4 @@
-// 앱을 켜면 지도가 아니라 '포털 접속하기'·'실시간 버스 보기' 버튼이 있는 첫 화면이 뜨는지 검사한다.
+// 앱을 켜면 지도가 아니라 '실시간 버스 보기'·≡ 메뉴(포털 등 바로가기) 버튼이 있는 첫 화면이 뜨는지 검사한다.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -14,12 +14,16 @@ void main() {
   testWidgets('첫 화면에 버튼이 있고 지도는 없음', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await tester.pumpWidget(ChangeNotifierProvider<BusService>(create: (_) => BusService(), child: const MyApp()));
-    expect(find.text('포털 접속하기'), findsOneWidget);
     expect(find.text('실시간 버스 보기'), findsOneWidget);
+    expect(find.text('내 시간표'), findsOneWidget);
+    // 바로가기는 처음엔 숨어 있다가 오른쪽 위 ≡ 버튼을 누르면 펼쳐진다.
+    expect(find.text('포털 접속하기'), findsNothing);
+    await tester.tap(find.byTooltip('메뉴'));
+    await tester.pumpAndSettle();
+    expect(find.text('포털 접속하기'), findsOneWidget);
     expect(find.text('학사일정'), findsOneWidget);
     expect(find.text('공지사항'), findsOneWidget);
     expect(find.text('학식 메뉴'), findsOneWidget);
-    expect(find.text('내 시간표'), findsOneWidget);
     expect(find.text('제주대 순환버스'), findsNothing);
     expect(find.byType(MapView), findsNothing);
   });
