@@ -193,7 +193,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 /// 정문 출발 카드: 머리줄(정문 출발 · 현재 시각), 코스별 다음 출발, 맨 아래 지도 열기.
-/// 색이 상태를 말한다 — 둘 다 운행 종료(또는 주말)면 회색, 그 밖엔 초록.
+/// 색이 상태를 말한다 — 둘 다 운행 종료(또는 주말·공휴일)면 회색, 그 밖엔 초록.
 class _DepartureHero extends StatelessWidget {
   const _DepartureHero({required this.now, required this.onTap});
 

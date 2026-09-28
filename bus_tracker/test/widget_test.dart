@@ -11,10 +11,10 @@ void main() {
   test('운행 중 → 현재 → 다음', () => expect(locationText(bus(station: '본관', next: '학생회관', status: 'running')), '본관 → 학생회관'));
   test('종점 대기(다음 정류장 없음) → null 대신 대기 중', () => expect(locationText(bus(station: '정문', status: 'waiting')), '정문 (대기 중)'));
   test('다음 정류장이 현재와 같으면 화살표 없음', () => expect(locationText(bus(station: '정문', next: '정문', status: 'running')), '정문'));
-  test('운행 안 함 → 다음 정문 출발 시각', () => expect(locationText(bus(station: '정문', recent: false), DateTime(2026, 9, 25, 7, 0)), '다음 출발 08:05'));
-  test('출발 시각 정각이면 그 시각', () => expect(locationText(bus(recent: false), DateTime(2026, 9, 25, 13, 5)), '다음 출발 13:05'));
-  test('B 코스는 B 시간표', () => expect(nextDepartureText('B', DateTime(2026, 9, 25, 11, 31)), '다음 출발 12:50'));
-  test('막차 이후 → 운행 종료', () => expect(nextDepartureText('A', DateTime(2026, 9, 25, 18, 41)), '오늘 운행 종료'));
+  test('운행 안 함 → 다음 정문 출발 시각', () => expect(locationText(bus(station: '정문', recent: false), DateTime(2026, 10, 2, 7, 0)), '다음 출발 08:05'));
+  test('출발 시각 정각이면 그 시각', () => expect(locationText(bus(recent: false), DateTime(2026, 10, 2, 13, 5)), '다음 출발 13:05'));
+  test('B 코스는 B 시간표', () => expect(nextDepartureText('B', DateTime(2026, 10, 2, 11, 31)), '다음 출발 12:50'));
+  test('막차 이후 → 운행 종료', () => expect(nextDepartureText('A', DateTime(2026, 10, 2, 18, 41)), '오늘 운행 종료'));
   test('시간표 23회', () => expect(departures.values.map((List<String> l) => l.length), <int>[23, 23]));
 
   // 08:45 출발편 기준. 늦게 떠나면 그 편을 붙잡고, 떠났거나 너무 늦으면 넘어간다.
@@ -37,6 +37,15 @@ void main() {
     expect(nextDeparture('A', DateTime(2026, 9, 26, 7, 0)), isNull);
     expect(nextDepartureText('B', DateTime(2026, 9, 27, 12, 0)), '주말 운행 없음');
     expect(departingNow(DateTime(2026, 9, 26, 8, 47)), isFalse);
-    expect(nextDepartureText('A', DateTime(2026, 9, 25, 18, 41)), '오늘 운행 종료'); // 금요일 막차 뒤는 그대로
+    expect(nextDepartureText('A', DateTime(2026, 10, 2, 18, 41)), '오늘 운행 종료'); // 금요일 막차 뒤는 그대로
+  });
+
+  // 2026-10-05(월)은 개천절 대체공휴일, 10-09(금)은 한글날. 공휴일에도 버스가 다니지 않는다.
+  test('공휴일은 운행 없음', () {
+    expect(nextDeparture('A', DateTime(2026, 10, 5, 7, 0)), isNull);
+    expect(nextDepartureText('B', DateTime(2026, 10, 9, 12, 0)), '공휴일 운행 없음');
+    expect(noServiceText(DateTime(2026, 10, 5)), '공휴일 운행 없음');
+    expect(departingNow(DateTime(2026, 10, 5, 8, 47)), isFalse);
+    expect(nextDeparture('A', DateTime(2026, 10, 6, 7, 0)), '08:05'); // 다음 날(화)은 평소대로
   });
 }

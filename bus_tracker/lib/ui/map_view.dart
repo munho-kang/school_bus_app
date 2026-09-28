@@ -71,21 +71,32 @@ const int lateGrace = 5;
 /// 실시간 위치로 볼 때 정문에서 출발을 기다리는 중인지.
 bool atGate(Bus? bus) => bus?.isRecent == true && bus!.station == '정문' && bus.status == 'waiting';
 
-/// 주말(토·일)엔 버스가 다니지 않는다.
-bool isWeekend(DateTime now) => now.weekday >= DateTime.saturday;
+/// 평일에 걸린 공휴일(대체공휴일 포함). 주말과 공휴일엔 버스가 다니지 않는다.
+/// 2026년 관공서 공휴일에서 옮김(노동절·제헌절 포함). 해가 바뀌면 새해 공휴일을 더 넣어야 한다.
+const Set<String> holidays = <String>{
+  '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-02', '2026-05-01', '2026-05-05', '2026-05-25',
+  '2026-06-03', '2026-07-17', '2026-08-17', '2026-09-24', '2026-09-25', '2026-10-05', '2026-10-09', '2026-12-25',
+};
+
+/// 오늘 버스가 쉬는 까닭('주말' · '공휴일'). 다니는 날이면 null.
+String? dayOff(DateTime now) {
+  if (now.weekday >= DateTime.saturday) return '주말';
+  final String ymd = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  return holidays.contains(ymd) ? '공휴일' : null;
+}
 
 /// 오늘 더 출발할 버스가 없을 때 짧은 문구.
-String noServiceText(DateTime now) => isWeekend(now) ? '주말 운행 없음' : '운행 종료';
+String noServiceText(DateTime now) => dayOff(now) == null ? '운행 종료' : '${dayOff(now)} 운행 없음';
 
 /// 출발 시각까지 남은 분('08:45'). 이미 지났으면 음수.
 int minutesUntil(String t, DateTime now) =>
     int.parse(t.substring(0, 2)) * 60 + int.parse(t.substring(3)) - (now.hour * 60 + now.minute);
 
-/// 다음 정문 출발 시각('08:45'). 오늘 막차가 지났거나 주말이면 null.
+/// 다음 정문 출발 시각('08:45'). 오늘 막차가 지났거나 주말·공휴일이면 null.
 /// 시각이 지났어도 버스가 아직 정문에 서 있으면(최대 [lateGrace]분) 그 편을 그대로 둔다.
 /// 출발 시각 그 1분 안에 버스가 이미 정문을 떠났으면 그 편은 건너뛴다('0분 후'가 남지 않게).
 String? nextDeparture(String busId, DateTime now, [Bus? bus]) {
-  if (isWeekend(now)) return null;
+  if (dayOff(now) != null) return null;
   final bool waiting = atGate(bus);
   final bool left = bus?.isRecent == true && !waiting;
   for (final String t in departures[busId] ?? const <String>[]) {
@@ -97,15 +108,15 @@ String? nextDeparture(String busId, DateTime now, [Bus? bus]) {
 
 /// 방금 출발 시각이 된(또는 지난 지 [lateGrace]분 안인) 편이 있는지. 이때만 실제 위치를 확인하면 된다.
 bool departingNow(DateTime now) =>
-    !isWeekend(now) &&
+    dayOff(now) == null &&
     departures.values.any(
       (List<String> ts) => ts.any((String t) => minutesUntil(t, now) <= 0 && minutesUntil(t, now) >= -lateGrace),
     );
 
-/// 운행 중이 아닐 때 보여줄 다음 정문 출발 시각. 막차가 지났으면 운행 종료, 주말이면 운행 없음.
+/// 운행 중이 아닐 때 보여줄 다음 정문 출발 시각. 막차가 지났으면 운행 종료, 주말·공휴일이면 운행 없음.
 String nextDepartureText(String busId, DateTime now) {
   final String? t = nextDeparture(busId, now);
-  if (t == null) return isWeekend(now) ? '주말 운행 없음' : '오늘 운행 종료';
+  if (t == null) return dayOff(now) == null ? '오늘 운행 종료' : noServiceText(now);
   return '다음 출발 $t';
 }
 
