@@ -131,7 +131,7 @@ class _TimetableCardState extends State<TimetableCard> {
               ),
             )
           else
-            _Grid(lessons: _lessons, today: widget.now.weekday, onTap: _edit),
+            _Grid(lessons: _lessons, now: widget.now, onTap: _edit),
         ],
       ),
     );
@@ -141,12 +141,12 @@ class _TimetableCardState extends State<TimetableCard> {
 // 시트에서 '삭제'를 눌렀다는 표시로만 쓰는 값.
 const Lesson _deleted = Lesson(title: '', days: <int>[], start: 0, end: 0);
 
-/// 월~금 칸에 수업을 시간 비율대로 놓는다. 오늘 요일 머리글은 초록.
+/// 월~금 칸에 수업을 시간 비율대로 놓는다. 오늘 요일 머리글은 초록, 오늘 칸엔 지금 시각에 빨간 선.
 class _Grid extends StatelessWidget {
-  const _Grid({required this.lessons, required this.today, required this.onTap});
+  const _Grid({required this.lessons, required this.now, required this.onTap});
 
   final List<Lesson> lessons;
-  final int today;
+  final DateTime now;
   final void Function(Lesson) onTap;
 
   static const double _hourH = 52;
@@ -156,6 +156,8 @@ class _Grid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (int first, int last) = hourRange(lessons);
+    final int today = now.weekday;
+    final int minute = now.hour * 60 + now.minute;
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints c) {
         final double colW = (c.maxWidth - _labelW) / 5;
@@ -198,6 +200,27 @@ class _Grid extends StatelessWidget {
                     height: y(l.end) - y(l.start) - 3,
                     child: _Block(lesson: l, colors: _palette[colorIndex(lessons, l.title)], onTap: () => onTap(l)),
                   ),
+              // 지금 시각 선: 평일이고 표 시간 안일 때만. 수업 칸 위에 그리되 누르기는 막지 않는다.
+              if (today <= 5 && minute >= first * 60 && minute <= last * 60)
+                Positioned(
+                  left: _labelW + (today - 1) * colW - 3,
+                  width: colW + 3,
+                  top: y(minute) - 3,
+                  height: 6,
+                  child: IgnorePointer(
+                    key: const ValueKey<String>('now-line'),
+                    child: Row(
+                      children: <Widget>[
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
+                        ),
+                        Expanded(child: Container(height: 2, color: AppColors.danger)),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         );

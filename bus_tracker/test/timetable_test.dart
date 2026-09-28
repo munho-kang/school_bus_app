@@ -49,6 +49,19 @@ void main() {
     expect(find.textContaining('아직 수업이 없어요'), findsOneWidget);
     expect(decodeLessons((await SharedPreferences.getInstance()).getString('timetable')!), isEmpty);
   });
+
+  testWidgets('지금 시각 선: 평일 표 시간 안에만 보인다', (WidgetTester tester) async {
+    Future<Finder> at(DateTime now) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{'timetable': encodeLessons(<Lesson>[a, b])});
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(child: TimetableCard(key: UniqueKey(), now: now)))));
+      await tester.pumpAndSettle();
+      return find.byKey(const ValueKey<String>('now-line'));
+    }
+
+    expect(await at(DateTime(2026, 9, 28, 11)), findsOneWidget); // 월 11시
+    expect(await at(DateTime(2026, 9, 28, 8)), findsNothing); // 표(10~15시) 밖
+    expect(await at(DateTime(2026, 9, 27, 11)), findsNothing); // 일요일
+  });
 }
 
 extension on Lesson {
