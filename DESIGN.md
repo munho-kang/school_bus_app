@@ -63,6 +63,7 @@ All tokens and shared widgets live in `bus_tracker/lib/ui/theme.dart`. Light the
 - **Chips** — stadium, white with border; selected = primary fill, white 700 text.
 - **Buttons** — outlined, 52px, 14px corners, 17/700. Map buttons are white circles with elevation 3.
 - **Schedule calendar** — month grid in an AppCard (Sunday first). Today = primary filled circle; selected day = 1.5px primary outline. A schedule's short name shows only on its start day (one-day = primary-tint chip, period = hairline chip); days inside a period get a thin grey bar. Tapping a day lists that day's items below.
+- **Notice list** — a non-flying HeroCard (`fly: false`) on top counts notices from the last 3 days (green; grey when none). Each row: a 52px date box (big day + small month; primary-tint when new, hairline otherwise), a category tag (primary-tint) and a solid primary '새 글' tag, title 16/600, department 13 text-sub. The pinned group's header row is primary-tint.
 - **Past schedule items** lose their card, not their contrast.
 
 ## Motion

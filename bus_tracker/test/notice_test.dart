@@ -51,9 +51,26 @@ void main() {
     expect(find.text('JNU Co-PBL [아이디어를 웹으로: 바이브코딩 워크숍]'), findsNothing);
     expect(find.text('[SWEAT OUT] 2026 SWEAT OUT FESTIVAL 참가자 모집'), findsWidgets); // 학교에 같은 제목 글이 2개 있음
 
-    await tester.tap(find.text('학사'));
+    await tester.tap(find.widgetWithText(ChoiceChip, '학사')); // 공지 딱지에도 '학사'가 있어 분류 버튼만 집는다
     await tester.pumpAndSettle();
     expect(asked, <String?>[null, '320']);
+  });
+
+  test('새 글: 오늘부터 2일 전까지', () {
+    final DateTime today = DateTime(2026, 9, 23, 15);
+    expect(isNewNotice('2026-09-23', today), isTrue);
+    expect(isNewNotice('2026-09-21', today), isTrue);
+    expect(isNewNotice('2026-09-20', today), isFalse);
+    expect(isNewNotice('날짜 없음', today), isFalse);
+  });
+
+  testWidgets('머리 카드: 최근 3일 새 공지 개수(고정 공지는 빼고 셈)', (WidgetTester tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: NoticePage(today: DateTime(2026, 9, 23), load: (int page, String? category) async => parseNotices(page1)),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('최근 3일 새 공지'), findsOneWidget);
+    expect(find.text('16개'), findsOneWidget);
   });
 
   testWidgets('불러오기 실패 → 안내와 다시 시도 버튼', (WidgetTester tester) async {

@@ -193,6 +193,7 @@ Widget _bubble(double size, double alpha) => Container(
 
 /// 상태를 색으로 말하는 그라데이션 카드(운행 중 초록 · 운행 종료 회색). 안의 글씨·아이콘은 흰색.
 /// 홈 카드와 지도 상단 패널이 같은 Hero('board')라, 누르면 카드가 그대로 지도 위로 옮겨 간다 — 한 화면에 하나만 둔다.
+/// 다른 화면(공지 등)의 머리 카드는 fly: false로 날아가는 효과 없이 쓴다.
 class HeroCard extends StatelessWidget {
   const HeroCard({
     super.key,
@@ -201,9 +202,11 @@ class HeroCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(20),
     this.radius = const BorderRadius.all(Radius.circular(22)),
     this.onTap,
+    this.fly = true,
   });
 
   final HeroTone tone;
+  final bool fly;
   final Widget child;
   final EdgeInsetsGeometry padding;
   final BorderRadius radius;
@@ -214,38 +217,35 @@ class HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget card = Hero(
-      tag: 'board',
-      flightShuttleBuilder: _shuttle,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: radius,
-        clipBehavior: Clip.antiAlias,
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: _heroColors[tone]!),
-          ),
-          child: InkWell(
-            onTap: onTap,
-            splashColor: Colors.white.withValues(alpha: 0.16),
-            highlightColor: Colors.white.withValues(alpha: 0.08),
-            child: Stack(
-              children: <Widget>[
-                Positioned(right: -24, top: -24, child: _bubble(120, 0.12)),
-                Positioned(right: 20, bottom: -40, child: _bubble(90, 0.08)),
-                Padding(
-                  padding: padding,
-                  child: DefaultTextStyle.merge(
-                    style: const TextStyle(color: Colors.white),
-                    child: IconTheme.merge(data: const IconThemeData(color: Colors.white), child: child),
-                  ),
+    final Widget body = Material(
+      color: Colors.transparent,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: _heroColors[tone]!),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          splashColor: Colors.white.withValues(alpha: 0.16),
+          highlightColor: Colors.white.withValues(alpha: 0.08),
+          child: Stack(
+            children: <Widget>[
+              Positioned(right: -24, top: -24, child: _bubble(120, 0.12)),
+              Positioned(right: 20, bottom: -40, child: _bubble(90, 0.08)),
+              Padding(
+                padding: padding,
+                child: DefaultTextStyle.merge(
+                  style: const TextStyle(color: Colors.white),
+                  child: IconTheme.merge(data: const IconThemeData(color: Colors.white), child: child),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
+    final Widget card = fly ? Hero(tag: 'board', flightShuttleBuilder: _shuttle, child: body) : body;
     return onTap == null ? card : Pressable(scale: 0.97, child: card);
   }
 }
