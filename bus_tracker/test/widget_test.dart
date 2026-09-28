@@ -23,6 +23,9 @@ void main() {
     expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 47)), '09:30'); // 위치 모름 → 시간표대로
     expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 47), gate), '08:45'); // 아직 정문 → 그대로
     expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 47), bus(station: '약대', status: 'running')), '09:30'); // 떠남
+    expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 45), bus(station: '약대', status: 'running')), '09:30'); // 정시에 떠남 → '0분 후' 아님
+    expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 45), gate), '08:45'); // 정시, 아직 정문
+    expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 45)), '08:45'); // 정시, 위치 모름 → 시간표대로
     expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 51), gate), '09:30'); // 5분 넘게 늦음 → 안전장치
     expect(nextDeparture('A', DateTime(2026, 9, 28, 8, 47), bus(station: '정문', status: 'waiting', recent: false)), '09:30');
     expect(departingNow(DateTime(2026, 9, 28, 8, 47)), isTrue);

@@ -77,11 +77,13 @@ int minutesUntil(String t, DateTime now) =>
 
 /// 다음 정문 출발 시각('08:45'). 오늘 막차가 지났으면 null.
 /// 시각이 지났어도 버스가 아직 정문에 서 있으면(최대 [lateGrace]분) 그 편을 그대로 둔다.
+/// 출발 시각 그 1분 안에 버스가 이미 정문을 떠났으면 그 편은 건너뛴다('0분 후'가 남지 않게).
 String? nextDeparture(String busId, DateTime now, [Bus? bus]) {
   final bool waiting = atGate(bus);
+  final bool left = bus?.isRecent == true && !waiting;
   for (final String t in departures[busId] ?? const <String>[]) {
     final int d = minutesUntil(t, now);
-    if (d >= 0 || (waiting && d >= -lateGrace)) return t;
+    if (d > 0 || (d == 0 && !left) || (waiting && d >= -lateGrace)) return t;
   }
   return null;
 }
