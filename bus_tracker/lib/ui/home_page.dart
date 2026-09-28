@@ -1,8 +1,10 @@
 // 앱 첫 화면. 위는 내 시간표(메인), 그 아래 작은 그라데이션 히어로 카드(A·B 코스 정문 다음 출발, 누르면 실시간 지도).
-// 더 내리면 실시간 지도 미리보기가 나온다(누르면 전체 화면 지도).
+// 화면 끝에서 더 아래로 내리면(휠·손가락) 누른 것처럼 실시간 지도 화면으로 넘어간다.
 // 포털·학사일정·공지사항·학식 바로가기는 오른쪽 위 ≡ 버튼으로 펼치는 서랍 안에 있다.
 // 포털은 학교 포털을(웹에선 새 탭으로), 나머지는 각 화면을 띄운다.
 import 'dart:async';
+import 'dart:math' as math;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/academic_schedule.dart';
@@ -53,9 +55,9 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   DateTime _now = DateTime.now();
   late final Timer _tick;
-  final GlobalKey _mapKey = GlobalKey();
-  bool _mapBuilt = false; // 한 번 띄운 지도는 다시 불러오지 않게 둔다.
-  bool _mapOn = false; // 지도 칸이 지금 화면에 보이는지.
+  final ScrollController _scroll = ScrollController();
+  double _pull = 0; // 화면 끝에서 손가락을 더 올린 거리.
+  bool _inMap = false; // 지도 화면을 두 번 겹쳐 열지 않게.
 
   @override
   void initState() {
@@ -67,33 +69,44 @@ class _HomePageState extends State<HomePage> {
       if (departingNow(n)) context.read<BusService>().fetchNow();
       if (n.minute != _now.minute) setState(() => _now = n);
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkMap()); // 스크롤 없이도 보이는 넓은 화면
-  }
-
-  // 지도 칸이 화면에 들어오면 지도를 띄우고 버스 위치를 받기 시작한다. 벗어나면 받기를 멈춘다.
-  void _checkMap() {
-    final RenderBox? box = _mapKey.currentContext?.findRenderObject() as RenderBox?;
-    if (!mounted || box == null || !box.attached) return;
-    final double top = box.localToGlobal(Offset.zero).dy;
-    final bool on = top < MediaQuery.sizeOf(context).height && top + box.size.height > 0;
-    if (on == _mapOn) return;
-    _mapOn = on;
-    final BusService svc = context.read<BusService>();
-    on ? svc.start() : svc.stop();
-    if (on && !_mapBuilt) setState(() => _mapBuilt = true);
   }
 
   @override
   void dispose() {
     _tick.cancel();
+    _scroll.dispose();
     super.dispose();
+  }
+
+  // 손가락: 화면 끝에 닿은 뒤 손가락을 80 넘게 더 올리면 지도로. (아이폰은 끝에서 화면이 덜 늘어나서, 늘어난 양 대신 손가락 이동 거리를 잰다.)
+  bool _onScroll(ScrollNotification n) {
+    final DragUpdateDetails? drag = switch (n) {
+      ScrollUpdateNotification(:final DragUpdateDetails? dragDetails) => dragDetails,
+      OverscrollNotification(:final DragUpdateDetails? dragDetails) => dragDetails,
+      _ => null,
+    };
+    if (n is ScrollStartNotification) _pull = 0;
+    if (drag != null && n.metrics.extentAfter == 0) _pull -= drag.delta.dy;
+    if (_pull > 80) _openMap();
+    return false;
+  }
+
+  // 휠·트랙패드: 이미 맨 아래인데 또 내리면 지도로. (끝에선 화면이 안 움직여 스크롤 알림이 없어 휠을 직접 본다.)
+  void _onWheel(PointerSignalEvent e) {
+    if (e is PointerScrollEvent && e.scrollDelta.dy > 0 && _scroll.hasClients && _scroll.position.extentAfter == 0) {
+      _openMap();
+    }
   }
 
   // 폴링은 지도를 보는 동안에만 돈다. push가 끝나는 시점(뒤로가기)에 멈춘다.
   Future<void> _openMap() async {
+    if (_inMap) return;
+    _inMap = true;
+    _pull = 0;
     final BusService svc = context.read<BusService>()..start();
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const MapView()));
-    if (!_mapOn) svc.stop(); // 홈 지도가 보이는 중이면 계속 받는다.
+    svc.stop();
+    _inMap = false;
   }
 
   void _push(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
@@ -155,83 +168,69 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       body: SafeArea(
-        // 휴대폰에선 카드를 맨 위에, 넓은 화면(웹)에선 가운데에.
-        child: Align(
-          alignment: MediaQuery.sizeOf(context).width < 600 ? Alignment.topCenter : Alignment.center,
-          // 스크롤할 때뿐 아니라 시간표가 늦게 채워져 내용 높이가 바뀔 때(ScrollMetricsNotification)도 다시 본다.
-          child: NotificationListener<Notification>(
-            onNotification: (_) {
-              _checkMap();
-              return false;
-            },
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              // 컴퓨터(웹)처럼 넓은 화면에서 카드가 끝까지 늘어나지 않게 폭을 제한한다.
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: Row(
+        // 빈 곳까지 화면 전체가 스크롤을 받는다(지도에서 ← 누른 뒤 커서가 구석에 있어도 내리면 지도로).
+        child: Listener(
+          onPointerSignal: _onWheel,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _onScroll,
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints box) => SingleChildScrollView(
+                controller: _scroll,
+                // 내용이 화면보다 짧아도 끌어내릴 수 있게(그래야 지도로 넘어간다).
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: math.max(0, box.maxHeight - 40)), // 40 = 위아래 여백
+                  // 휴대폰에선 카드를 맨 위에, 넓은 화면(웹)에선 가운데에.
+                  child: Align(
+                    alignment: box.maxWidth < 600 ? Alignment.topCenter : Alignment.center,
+                    // 컴퓨터(웹)처럼 넓은 화면에서 카드가 끝까지 늘어나지 않게 폭을 제한한다.
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 440),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4),
+                            child: Row(
                               children: <Widget>[
-                                Text(
-                                  '${_now.month}월 ${_now.day}일 ${week[_now.weekday - 1]}요일',
-                                  style: const TextStyle(fontSize: 15, color: AppColors.textSub),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        '${_now.month}월 ${_now.day}일 ${week[_now.weekday - 1]}요일',
+                                        style: const TextStyle(fontSize: 15, color: AppColors.textSub),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      const Text(
+                                        '제주대 캠퍼스',
+                                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                const SizedBox(height: 4),
-                                const Text('제주대 캠퍼스', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
+                                Builder(
+                                  builder: (BuildContext ctx) => Pressable(
+                                    scale: 0.9,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.menu, size: 28),
+                                      tooltip: '메뉴',
+                                      onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                          Builder(
-                            builder: (BuildContext ctx) => Pressable(
-                              scale: 0.9,
-                              child: IconButton(
-                                icon: const Icon(Icons.menu, size: 28),
-                                tooltip: '메뉴',
-                                onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-                              ),
-                            ),
-                          ),
+                          const SizedBox(height: 20),
+                          TimetableCard(now: _now),
+                          const SizedBox(height: 16),
+                          _DepartureHero(now: _now, onTap: _openMap),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    TimetableCard(now: _now),
-                    const SizedBox(height: 16),
-                    _DepartureHero(now: _now, onTap: _openMap),
-                    const SizedBox(height: 16),
-                    // 실시간 지도 미리보기. 손가락이 지도에 먹히지 않게 위에 투명 판을 덮어, 스크롤은 화면이 받고 누르면 전체 화면 지도.
-                    ClipRRect(
-                      key: _mapKey,
-                      borderRadius: BorderRadius.circular(18),
-                      child: SizedBox(
-                        height: 340,
-                        child: _mapBuilt
-                            ? Stack(
-                                children: <Widget>[
-                                  const MapView(embedded: true),
-                                  Positioned.fill(
-                                    child: overMap(
-                                      GestureDetector(
-                                        behavior: HitTestBehavior.opaque,
-                                        onTap: _openMap,
-                                        child: const SizedBox.expand(),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : const ColoredBox(color: AppColors.card),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

@@ -13,10 +13,6 @@ import 'package:bus_tracker/ui/theme.dart';
 void main() {
   testWidgets('첫 화면에 버튼이 있고 지도는 없음', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
-    // 작은 휴대폰 크기. 지도 미리보기는 시간표·출발 카드 아래라 스크롤하기 전엔 뜨지 않는다(테스트엔 지도 부품이 없다).
-    tester.view.physicalSize = const Size(390, 500);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
     await tester.pumpWidget(ChangeNotifierProvider<BusService>(create: (_) => BusService(), child: const MyApp()));
     expect(find.text('실시간 버스 보기'), findsOneWidget);
     expect(find.text('내 시간표'), findsOneWidget);
