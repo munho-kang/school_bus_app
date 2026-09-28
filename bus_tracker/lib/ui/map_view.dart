@@ -132,7 +132,11 @@ String locationText(Bus? bus, [DateTime? now]) {
 }
 
 class MapView extends StatefulWidget {
-  const MapView({super.key});
+  const MapView({super.key, this.embedded = false});
+
+  /// 홈 화면 아래에 끼워 넣은 미리보기면 true: 지도만 그리고 위 패널·버튼은 뺀다.
+  final bool embedded;
+
   @override
   State<MapView> createState() => _MapViewState();
 }
@@ -151,6 +155,8 @@ class _MapViewState extends State<MapView> {
       onReady: () {
         if (mounted && !_ready) {
           _ready = true;
+          // 작은 미리보기 칸에도 정문부터 노선 전체가 들어오게 한 단계 멀리서 본다.
+          if (widget.embedded) _surface.run('mapKakaoMap && mapKakaoMap.setLevel(5);').onError((_, _) {});
           _push(context.read<BusService>());
           if (_lastPos != null) _pushLocation(_lastPos!);
         }
@@ -222,6 +228,7 @@ class _MapViewState extends State<MapView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _push(svc);
     });
+    if (widget.embedded) return _surface.view;
 
     // 상단이 초록 패널이라 시계·배터리 아이콘을 밝게.
     return AnnotatedRegion<SystemUiOverlayStyle>(

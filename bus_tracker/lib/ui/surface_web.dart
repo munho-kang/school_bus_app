@@ -6,9 +6,9 @@ import 'package:web/web.dart' as web;
 
 class MapSurface {
   MapSurface({required VoidCallback onReady}) {
-    // map.html은 준비되면 부모 창에 'bus-map-ready'를 보낸다.
+    // map.html은 준비되면 부모 창에 'bus-map-ready'를 보낸다. 지도가 둘(홈 미리보기·전체 화면)일 수 있어 내 iframe 것만 받는다.
     _listener = ((web.MessageEvent e) {
-      if (e.data.dartify() == 'bus-map-ready') onReady();
+      if (e.data.dartify() == 'bus-map-ready' && e.source.strictEquals(_frame.contentWindow).toDart) onReady();
     }).toJS;
     web.window.addEventListener('message', _listener);
   }

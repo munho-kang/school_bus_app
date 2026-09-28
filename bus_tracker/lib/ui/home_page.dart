@@ -1,4 +1,5 @@
 // 앱 첫 화면. 위는 내 시간표(메인), 그 아래 작은 그라데이션 히어로 카드(A·B 코스 정문 다음 출발, 누르면 실시간 지도).
+// 더 내리면 실시간 지도 미리보기가 나온다(누르면 전체 화면 지도).
 // 포털·학사일정·공지사항·학식 바로가기는 오른쪽 위 ≡ 버튼으로 펼치는 서랍 안에 있다.
 // 포털은 학교 포털을(웹에선 새 탭으로), 나머지는 각 화면을 띄운다.
 import 'dart:async';
@@ -52,6 +53,9 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   DateTime _now = DateTime.now();
   late final Timer _tick;
+  final GlobalKey _mapKey = GlobalKey();
+  bool _mapBuilt = false; // 한 번 띄운 지도는 다시 불러오지 않게 둔다.
+  bool _mapOn = false; // 지도 칸이 지금 화면에 보이는지.
 
   @override
   void initState() {
@@ -63,6 +67,20 @@ class _HomePageState extends State<HomePage> {
       if (departingNow(n)) context.read<BusService>().fetchNow();
       if (n.minute != _now.minute) setState(() => _now = n);
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkMap()); // 스크롤 없이도 보이는 넓은 화면
+  }
+
+  // 지도 칸이 화면에 들어오면 지도를 띄우고 버스 위치를 받기 시작한다. 벗어나면 받기를 멈춘다.
+  void _checkMap() {
+    final RenderBox? box = _mapKey.currentContext?.findRenderObject() as RenderBox?;
+    if (!mounted || box == null || !box.attached) return;
+    final double top = box.localToGlobal(Offset.zero).dy;
+    final bool on = top < MediaQuery.sizeOf(context).height && top + box.size.height > 0;
+    if (on == _mapOn) return;
+    _mapOn = on;
+    final BusService svc = context.read<BusService>();
+    on ? svc.start() : svc.stop();
+    if (on && !_mapBuilt) setState(() => _mapBuilt = true);
   }
 
   @override
@@ -75,7 +93,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _openMap() async {
     final BusService svc = context.read<BusService>()..start();
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const MapView()));
-    svc.stop();
+    if (!_mapOn) svc.stop(); // 홈 지도가 보이는 중이면 계속 받는다.
   }
 
   void _push(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
@@ -140,49 +158,81 @@ class _HomePageState extends State<HomePage> {
         // 휴대폰에선 카드를 맨 위에, 넓은 화면(웹)에선 가운데에.
         child: Align(
           alignment: MediaQuery.sizeOf(context).width < 600 ? Alignment.topCenter : Alignment.center,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            // 컴퓨터(웹)처럼 넓은 화면에서 카드가 끝까지 늘어나지 않게 폭을 제한한다.
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                '${_now.month}월 ${_now.day}일 ${week[_now.weekday - 1]}요일',
-                                style: const TextStyle(fontSize: 15, color: AppColors.textSub),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text('제주대 캠퍼스', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
-                            ],
-                          ),
-                        ),
-                        Builder(
-                          builder: (BuildContext ctx) => Pressable(
-                            scale: 0.9,
-                            child: IconButton(
-                              icon: const Icon(Icons.menu, size: 28),
-                              tooltip: '메뉴',
-                              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+          // 스크롤할 때뿐 아니라 시간표가 늦게 채워져 내용 높이가 바뀔 때(ScrollMetricsNotification)도 다시 본다.
+          child: NotificationListener<Notification>(
+            onNotification: (_) {
+              _checkMap();
+              return false;
+            },
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              // 컴퓨터(웹)처럼 넓은 화면에서 카드가 끝까지 늘어나지 않게 폭을 제한한다.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  '${_now.month}월 ${_now.day}일 ${week[_now.weekday - 1]}요일',
+                                  style: const TextStyle(fontSize: 15, color: AppColors.textSub),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text('제주대 캠퍼스', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
+                              ],
                             ),
                           ),
-                        ),
-                      ],
+                          Builder(
+                            builder: (BuildContext ctx) => Pressable(
+                              scale: 0.9,
+                              child: IconButton(
+                                icon: const Icon(Icons.menu, size: 28),
+                                tooltip: '메뉴',
+                                onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  TimetableCard(now: _now),
-                  const SizedBox(height: 16),
-                  _DepartureHero(now: _now, onTap: _openMap),
-                ],
+                    const SizedBox(height: 20),
+                    TimetableCard(now: _now),
+                    const SizedBox(height: 16),
+                    _DepartureHero(now: _now, onTap: _openMap),
+                    const SizedBox(height: 16),
+                    // 실시간 지도 미리보기. 손가락이 지도에 먹히지 않게 위에 투명 판을 덮어, 스크롤은 화면이 받고 누르면 전체 화면 지도.
+                    ClipRRect(
+                      key: _mapKey,
+                      borderRadius: BorderRadius.circular(18),
+                      child: SizedBox(
+                        height: 340,
+                        child: _mapBuilt
+                            ? Stack(
+                                children: <Widget>[
+                                  const MapView(embedded: true),
+                                  Positioned.fill(
+                                    child: overMap(
+                                      GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: _openMap,
+                                        child: const SizedBox.expand(),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : const ColoredBox(color: AppColors.card),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -233,7 +283,10 @@ class _DepartureHero extends StatelessWidget {
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: const Row(
               children: <Widget>[
                 Text('실시간 버스 보기', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
@@ -304,7 +357,13 @@ class _CourseRow extends StatelessWidget {
 }
 
 class _MenuRow extends StatelessWidget {
-  const _MenuRow({required this.icon, required this.title, required this.subtitle, required this.onTap, this.external = false});
+  const _MenuRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.external = false,
+  });
 
   final IconData icon;
   final String title;
@@ -344,7 +403,11 @@ class _MenuRow extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(external ? Icons.open_in_new : Icons.chevron_right, color: AppColors.textMuted, size: external ? 18 : 24),
+              Icon(
+                external ? Icons.open_in_new : Icons.chevron_right,
+                color: AppColors.textMuted,
+                size: external ? 18 : 24,
+              ),
             ],
           ),
         ),
