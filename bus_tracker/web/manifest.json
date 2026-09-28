@@ -1,6 +1,6 @@
 {
-    "name": "제주대 순환버스",
-    "short_name": "순환버스",
+    "name": "Hidden spot",
+    "short_name": "Hidden spot",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#F7F8FA",
