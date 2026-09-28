@@ -71,14 +71,21 @@ const int lateGrace = 5;
 /// 실시간 위치로 볼 때 정문에서 출발을 기다리는 중인지.
 bool atGate(Bus? bus) => bus?.isRecent == true && bus!.station == '정문' && bus.status == 'waiting';
 
+/// 주말(토·일)엔 버스가 다니지 않는다.
+bool isWeekend(DateTime now) => now.weekday >= DateTime.saturday;
+
+/// 오늘 더 출발할 버스가 없을 때 짧은 문구.
+String noServiceText(DateTime now) => isWeekend(now) ? '주말 운행 없음' : '운행 종료';
+
 /// 출발 시각까지 남은 분('08:45'). 이미 지났으면 음수.
 int minutesUntil(String t, DateTime now) =>
     int.parse(t.substring(0, 2)) * 60 + int.parse(t.substring(3)) - (now.hour * 60 + now.minute);
 
-/// 다음 정문 출발 시각('08:45'). 오늘 막차가 지났으면 null.
+/// 다음 정문 출발 시각('08:45'). 오늘 막차가 지났거나 주말이면 null.
 /// 시각이 지났어도 버스가 아직 정문에 서 있으면(최대 [lateGrace]분) 그 편을 그대로 둔다.
 /// 출발 시각 그 1분 안에 버스가 이미 정문을 떠났으면 그 편은 건너뛴다('0분 후'가 남지 않게).
 String? nextDeparture(String busId, DateTime now, [Bus? bus]) {
+  if (isWeekend(now)) return null;
   final bool waiting = atGate(bus);
   final bool left = bus?.isRecent == true && !waiting;
   for (final String t in departures[busId] ?? const <String>[]) {
@@ -89,14 +96,17 @@ String? nextDeparture(String busId, DateTime now, [Bus? bus]) {
 }
 
 /// 방금 출발 시각이 된(또는 지난 지 [lateGrace]분 안인) 편이 있는지. 이때만 실제 위치를 확인하면 된다.
-bool departingNow(DateTime now) => departures.values.any(
-  (List<String> ts) => ts.any((String t) => minutesUntil(t, now) <= 0 && minutesUntil(t, now) >= -lateGrace),
-);
+bool departingNow(DateTime now) =>
+    !isWeekend(now) &&
+    departures.values.any(
+      (List<String> ts) => ts.any((String t) => minutesUntil(t, now) <= 0 && minutesUntil(t, now) >= -lateGrace),
+    );
 
-/// 운행 중이 아닐 때 보여줄 다음 정문 출발 시각. 막차가 지났으면 운행 종료.
+/// 운행 중이 아닐 때 보여줄 다음 정문 출발 시각. 막차가 지났으면 운행 종료, 주말이면 운행 없음.
 String nextDepartureText(String busId, DateTime now) {
   final String? t = nextDeparture(busId, now);
-  return t == null ? '오늘 운행 종료' : '다음 출발 $t';
+  if (t == null) return isWeekend(now) ? '주말 운행 없음' : '오늘 운행 종료';
+  return '다음 출발 $t';
 }
 
 /// 상태 패널에 보여줄 위치 문구. 다음 정류장이 없을 때(종점 대기) 'null'이 찍히지 않게 한다.
@@ -184,10 +194,13 @@ class _MapViewState extends State<MapView> {
     if (!_ready) return;
     final Bus a = svc.busA ?? Bus(busId: 'A', latitude: 0, longitude: 0);
     final Bus b = svc.busB ?? Bus(busId: 'B', latitude: 0, longitude: 0);
-    final String sig = '${a.latitude},${a.longitude};${b.latitude},${b.longitude}';
-    if (sig == _lastSig) return;
-    _lastSig = sig;
-    final String json = jsonEncode([serializeOne(a), serializeOne(b)]);
+    // 옛날 위치는 운행 중으로 보이지 않게(화살표 없음) 넘긴다.
+    final bool fresh = svc.isFresh(DateTime.now());
+    Map<String, dynamic> one(Bus x) => serializeOne(x)..['isRecent'] = fresh && x.isRecent == true;
+    // 좌표뿐 아니라 상태(대기·운행)가 바뀌어도 다시 보낸다.
+    final String json = jsonEncode([one(a), one(b)]);
+    if (json == _lastSig) return;
+    _lastSig = json;
     _surface.run('window.receiveBusUpdate && window.receiveBusUpdate($json);').onError((_, _) {});
   }
 
@@ -221,6 +234,7 @@ class _MapViewState extends State<MapView> {
 
   // 홈 정문 출발 카드가 그대로 옮겨 온 초록 패널. 배경은 시계·노치 뒤까지 깔고, 글자는 안전 영역부터 놓는다.
   Widget statusPanel(BusService svc) {
+    final bool fresh = svc.isFresh(DateTime.now());
     return HeroCard(
       tone: HeroTone.live,
       padding: EdgeInsets.zero,
@@ -231,7 +245,7 @@ class _MapViewState extends State<MapView> {
         child: Row(
           children: <Widget>[
             Expanded(
-              child: busCard(id: 'A', bus: svc.busA),
+              child: busCard(id: 'A', bus: svc.busA, fresh: fresh),
             ),
             Container(
               width: 1,
@@ -240,7 +254,7 @@ class _MapViewState extends State<MapView> {
               color: Colors.white.withValues(alpha: 0.3),
             ),
             Expanded(
-              child: busCard(id: 'B', bus: svc.busB),
+              child: busCard(id: 'B', bus: svc.busB, fresh: fresh),
             ),
           ],
         ),
@@ -248,9 +262,8 @@ class _MapViewState extends State<MapView> {
     );
   }
 
-  Widget busCard({required String id, Bus? bus}) {
-    final bool online = bus?.isRecent == true;
-    final String? next = nextDeparture(id, DateTime.now());
+  Widget busCard({required String id, Bus? bus, required bool fresh}) {
+    final bool online = fresh && bus?.isRecent == true;
     // 번호판 옆에 현재 위치(또는 다음 출발), 끝에 켜진/꺼진 점.
     return Row(
       children: <Widget>[
@@ -258,7 +271,7 @@ class _MapViewState extends State<MapView> {
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            online || bus == null ? locationText(bus) : (next == null ? '운행 종료' : '다음 출발 $next'),
+            online || bus == null ? locationText(bus) : nextDepartureText(id, DateTime.now()),
             style: TextStyle(
               fontSize: 14,
               height: 1.25,

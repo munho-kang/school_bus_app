@@ -20,6 +20,10 @@ class BusService extends ChangeNotifier {
   String? errorMessage;
   DateTime? lastFetchedAt;
 
+  /// 마지막으로 위치를 받은 지 30초 안인지. 한동안 안 물어봤거나 인터넷이 끊겼으면
+  /// 들고 있는 위치는 옛날 것이라 '모름'으로 친다.
+  bool isFresh(DateTime now) => lastFetchedAt != null && now.difference(lastFetchedAt!) < const Duration(seconds: 30);
+
   Timer? _timer;
   bool _stopped = false;
 

@@ -25,7 +25,7 @@ int? minutesLeft(String busId, DateTime now, [Bus? bus]) {
 /// 코스 줄 오른쪽 문구. 한 시간이 넘게 남은 그날 첫차는 '첫차'. (5분 안이면 앞에 '곧 출발' 칩이 붙는다.)
 String waitText(String busId, DateTime now, [Bus? bus]) {
   final int? mins = minutesLeft(busId, now, bus);
-  if (mins == null) return '운행 종료';
+  if (mins == null) return noServiceText(now);
   if (mins < 0) return '${-mins}분 지연';
   if (mins < 60) return '$mins분 후';
   if (nextDeparture(busId, now) == departures[busId]!.first) return '첫차';
@@ -193,7 +193,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 /// 정문 출발 카드: 머리줄(정문 출발 · 현재 시각), 코스별 다음 출발, 맨 아래 지도 열기.
-/// 색이 상태를 말한다 — 둘 다 운행 종료면 회색, 그 밖엔 초록.
+/// 색이 상태를 말한다 — 둘 다 운행 종료(또는 주말)면 회색, 그 밖엔 초록.
 class _DepartureHero extends StatelessWidget {
   const _DepartureHero({required this.now, required this.onTap});
 
@@ -204,8 +204,11 @@ class _DepartureHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final String clock = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final BusService svc = context.watch<BusService>();
-    final List<String> waits = <String>[waitText('A', now, svc.busA), waitText('B', now, svc.busB)];
-    final HeroTone tone = waits.every((String w) => w == '운행 종료') ? HeroTone.off : HeroTone.live;
+    // 받은 지 오래된 위치는 믿지 않고 시간표대로 보여준다.
+    final bool fresh = svc.isFresh(DateTime.now());
+    final Bus? busA = fresh ? svc.busA : null, busB = fresh ? svc.busB : null;
+    final List<String> waits = <String>[waitText('A', now, busA), waitText('B', now, busB)];
+    final HeroTone tone = waits.every((String w) => w == noServiceText(now)) ? HeroTone.off : HeroTone.live;
     const TextStyle head = TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white70);
     return HeroCard(
       tone: tone,
@@ -224,9 +227,9 @@ class _DepartureHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          _CourseRow(id: 'A', now: now, bus: svc.busA, wait: waits[0]),
+          _CourseRow(id: 'A', now: now, bus: busA, wait: waits[0]),
           const SizedBox(height: 6),
-          _CourseRow(id: 'B', now: now, bus: svc.busB, wait: waits[1]),
+          _CourseRow(id: 'B', now: now, bus: busB, wait: waits[1]),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),

@@ -31,4 +31,12 @@ void main() {
     expect(departingNow(DateTime(2026, 9, 28, 8, 47)), isTrue);
     expect(departingNow(DateTime(2026, 9, 28, 9, 0)), isFalse);
   });
+
+  // 2026-09-26은 토요일, 27일은 일요일. 주말엔 버스가 다니지 않는다.
+  test('주말은 운행 없음', () {
+    expect(nextDeparture('A', DateTime(2026, 9, 26, 7, 0)), isNull);
+    expect(nextDepartureText('B', DateTime(2026, 9, 27, 12, 0)), '주말 운행 없음');
+    expect(departingNow(DateTime(2026, 9, 26, 8, 47)), isFalse);
+    expect(nextDepartureText('A', DateTime(2026, 9, 25, 18, 41)), '오늘 운행 종료'); // 금요일 막차 뒤는 그대로
+  });
 }

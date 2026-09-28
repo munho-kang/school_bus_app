@@ -56,6 +56,16 @@ void main() {
     final Bus gate = Bus(busId: 'A', latitude: 0, longitude: 0, station: '정문', status: 'waiting', isRecent: true);
     expect(waitText('A', DateTime(2026, 9, 28, 8, 47), gate), '2분 지연');
   });
+  test('안내판: 주말은 운행 없음', () => expect(waitText('A', DateTime(2026, 9, 27, 9, 0)), '주말 운행 없음'));
+  test('버스 위치는 받은 지 30초 안일 때만 믿는다', () {
+    final BusService svc = BusService();
+    final DateTime t = DateTime(2026, 9, 28, 9, 30);
+    expect(svc.isFresh(t), isFalse); // 한 번도 못 받음
+    svc.lastFetchedAt = t.subtract(const Duration(seconds: 10));
+    expect(svc.isFresh(t), isTrue);
+    svc.lastFetchedAt = t.subtract(const Duration(minutes: 40));
+    expect(svc.isFresh(t), isFalse); // 지난 출발 때 받은 것
+  });
   test('안내판: 막차 뒤 운행 종료', () => expect(waitText('B', DateTime(2026, 9, 28, 19, 0)), '운행 종료'));
   test('홈 학사일정 줄: 가장 가까운 남은 일정', () => expect(nextScheduleText(DateTime(2026, 9, 27)), startsWith('진행 중 · ')));
   test('홈 학사일정 줄: 다른 해면 표시 안 함', () => expect(nextScheduleText(DateTime(2027, 3, 1)), isNull));
