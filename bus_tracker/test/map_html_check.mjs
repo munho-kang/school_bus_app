@@ -7,16 +7,17 @@ const html = readFileSync(new URL('../assets/web/map.html', import.meta.url), 'u
 const src = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).find((s) => s.includes('function drawBusRoute'));
 // 지도 도형 흉내: 어떤 종류가 몇 개 지도에 올라가 있는지 센다
 const onMap = { CustomOverlay: 0, Polyline: 0 };
-const shape = (kind) => class { constructor() { this.kind = kind; } setMap(m) { onMap[kind] += m ? 1 : -1; } };
+const shape = (kind) => class { constructor() { this.kind = kind; } setMap(m) { onMap[kind] += m ? 1 : -1; } setContent(c) { this.content = c; } };
 const sandbox = {
   kakao: { maps: { load() {}, event: { addListener() {} }, LatLng: class { constructor(lat, lng) { this.lat = lat; this.lng = lng; } getLat() { return this.lat; } getLng() { return this.lng; } },
     CustomOverlay: shape('CustomOverlay'), Polyline: shape('Polyline') } },
   document: { getElementById: () => null, querySelectorAll: () => [] },
   window: {}, navigator: {}, console,
+  BUS_STATION_LIST: { A: ['정문', '약대', '해대1호관', '본관', '학생회관', '정문'] },
 };
-const { distM, bearingDeg, splitRoute, makePath, projectOnPath, pointAt, buildRoutePaths, routePaths, updateBusMarkers, stationAlongs, legWindow, locateBus } = new Function(
+const { distM, bearingDeg, splitRoute, makePath, projectOnPath, pointAt, buildRoutePaths, routePaths, updateBusMarkers, stationAlongs, legWindow, locateBus, nextArrival, showEta, closeEta, window } = new Function(
   ...Object.keys(sandbox),
-  src + '; mapKakaoMap = {}; return { distM, bearingDeg, splitRoute, makePath, projectOnPath, pointAt, buildRoutePaths, routePaths, updateBusMarkers, stationAlongs, legWindow, locateBus };',
+  src + '; mapKakaoMap = {}; return { distM, bearingDeg, splitRoute, makePath, projectOnPath, pointAt, buildRoutePaths, routePaths, updateBusMarkers, stationAlongs, legWindow, locateBus, nextArrival, showEta, closeEta, window };',
 )(...Object.values(sandbox));
 
 // 웹은 srcdoc iframe(location.protocol = 'about:')이라 카카오 SDK가 http로 지도를 부른다 → https 페이지에서 차단됨. 자동 https 승격이 있어야 한다.
@@ -109,5 +110,23 @@ updateBusMarkers([{ busId: 'B', latitude: -0.5, longitude: 0, isRecent: true, st
 assert.equal(onMap.CustomOverlay, 1);
 updateBusMarkers([{ busId: 'B', latitude: -0.5, longitude: 0, isRecent: false }]);
 assert.equal(onMap.CustomOverlay, 1);
+
+// 정류장 도착 예정: 정문 출발 후 정류장당 1분, 운행 중이면 버스가 있는 정류장부터 센다
+window.setSchedule({ A: ['08:05', '08:25'] }, null);
+const hm = (t) => +t.slice(0, 2) * 60 + +t.slice(3);
+assert.deepEqual(nextArrival('A', '학생회관', null, hm('08:00')), { min: 9, at: '08:09', live: false });
+assert.deepEqual(nextArrival('A', '학생회관', { isRecent: true, station: '약대' }, hm('08:07')), { min: 3, at: '08:10', live: true });
+assert.deepEqual(nextArrival('A', '약대', { isRecent: true, station: '학생회관' }, hm('08:10')), { min: 16, at: '08:26', live: false }); // 지나감 → 다음 편
+assert.deepEqual(nextArrival('A', '약대', { isRecent: true, status: 'waiting', station: '정문' }, hm('08:20')), { min: 6, at: '08:26', live: false });
+assert.equal(nextArrival('A', '약대', null, hm('09:00')), '운행 종료');
+assert.equal(nextArrival('A', '없는정류장', null, hm('08:00')), null);
+window.setSchedule({ A: ['08:05'] }, '주말 운행 없음');
+assert.equal(nextArrival('A', '약대', null, hm('08:00')), '주말 운행 없음');
+// 말풍선을 열면 하나 뜨고, 닫으면 사라지며 새로 세는 타이머도 멈춘다(안 멈추면 이 검사가 끝나지 않는다)
+const before = onMap.CustomOverlay;
+showEta('약대', new sandbox.kakao.maps.LatLng(0, 0));
+assert.equal(onMap.CustomOverlay, before + 1);
+closeEta();
+assert.equal(onMap.CustomOverlay, before);
 
 console.log('map_html_check: all ok');

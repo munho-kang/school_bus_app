@@ -338,11 +338,12 @@ function etaText(r) {
 function showEta(name, pos, e) {
   if (e) e.stopPropagation();
   closeEta();
-  eta = { name: name, overlay: new kakao.maps.CustomOverlay({ position: pos, content: '', xAnchor: 0.5, yAnchor: 1, zIndex: 20 }) };
+  eta = { name: name, overlay: new kakao.maps.CustomOverlay({ position: pos, content: '', xAnchor: 0.5, yAnchor: 1, zIndex: 20 }),
+          timer: setInterval(renderEta, 10000) };   // 열어 둔 동안 '몇 분 후'를 새로 센다
   renderEta();
   eta.overlay.setMap(mapKakaoMap);
 }
-function closeEta() { if (eta) eta.overlay.setMap(null); eta = null; }
+function closeEta() { if (eta) { eta.overlay.setMap(null); clearInterval(eta.timer); } eta = null; }
 function renderEta() {
   if (!eta) return;
   var d = new Date(), nowMin = d.getHours() * 60 + d.getMinutes(), rows = '';
@@ -352,7 +353,6 @@ function renderEta() {
   });
   eta.overlay.setContent('<div class="eta"><b>' + eta.name + '</b>' + (rows || '도착 정보 없음') + '</div>');
 }
-setInterval(renderEta, 10000);   // 말풍선을 열어 둔 동안 '몇 분 후'를 새로 센다
 
 // ---------- 내 위치 ----------
 // 위치는 앱(Flutter)이 권한을 받아 window.showMyLocation(lat, lng, accuracy)로 넘겨준다.
