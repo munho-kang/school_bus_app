@@ -188,6 +188,14 @@ class _MapViewState extends State<MapView> {
         .onError((_, _) {});
   }
 
+  void _centerMyLocation() {
+    if (_lastPos == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('내 위치를 아직 찾지 못했어요. 위치 권한을 확인해 주세요.')));
+      return;
+    }
+    _surface.run('window.centerMyLocation && window.centerMyLocation();').onError((_, _) {});
+  }
+
   Future<void> _load() async {
     _ready = false;
     _lastSig = null;
@@ -240,6 +248,7 @@ class _MapViewState extends State<MapView> {
               left: 16,
               child: circleButton(Icons.arrow_back, () => Navigator.of(context).maybePop(), '뒤로'),
             ),
+            Positioned(bottom: 92, right: 16, child: circleButton(Icons.my_location, _centerMyLocation, '내 위치 보기')),
             Positioned(bottom: 24, right: 16, child: circleButton(Icons.refresh, _load, '지도 새로고침')),
           ],
         ),

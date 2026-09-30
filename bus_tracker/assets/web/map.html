@@ -361,6 +361,11 @@ window.showMyLocation = function(lat, lng, acc) {
   myLoc = [lat, lng, Math.min(acc || 0, 150)];
   drawMyLocation();
 };
+// '내 위치' 버튼: 내 위치로 지도를 옮긴다.
+window.centerMyLocation = function() {
+  if (!mapKakaoMap || !myLoc) return;
+  mapKakaoMap.panTo(new kakao.maps.LatLng(myLoc[0], myLoc[1]));
+};
 function drawMyLocation() {
   if (!mapKakaoMap || !myLoc) return;
   var pos = new kakao.maps.LatLng(myLoc[0], myLoc[1]);
