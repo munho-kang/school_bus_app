@@ -7,7 +7,9 @@ const html = readFileSync(new URL('../assets/web/map.html', import.meta.url), 'u
 const src = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).find((s) => s.includes('function drawBusRoute'));
 // 지도 도형 흉내: 어떤 종류가 몇 개 지도에 올라가 있는지 센다
 const onMap = { CustomOverlay: 0, Polyline: 0 };
-const shape = (kind) => class { constructor() { this.kind = kind; } setMap(m) { onMap[kind] += m ? 1 : -1; } setContent(c) { this.content = c; } };
+let lastContent = ''; // 마지막으로 그린 말풍선 HTML
+const etaHtml = () => lastContent;
+const shape = (kind) => class { constructor() { this.kind = kind; } setMap(m) { onMap[kind] += m ? 1 : -1; } setContent(c) { this.content = c; lastContent = c; } };
 const sandbox = {
   kakao: { maps: { load() {}, event: { addListener() {} }, LatLng: class { constructor(lat, lng) { this.lat = lat; this.lng = lng; } getLat() { return this.lat; } getLng() { return this.lng; } },
     CustomOverlay: shape('CustomOverlay'), Polyline: shape('Polyline') } },
@@ -15,9 +17,9 @@ const sandbox = {
   window: {}, navigator: {}, console,
   BUS_STATION_LIST: { A: ['정문', '약대', '해대1호관', '본관', '학생회관', '정문'] },
 };
-const { distM, bearingDeg, splitRoute, makePath, projectOnPath, pointAt, buildRoutePaths, routePaths, updateBusMarkers, stationAlongs, legWindow, locateBus, nextArrival, showEta, closeEta, window } = new Function(
+const { distM, bearingDeg, splitRoute, makePath, projectOnPath, pointAt, buildRoutePaths, routePaths, updateBusMarkers, stationAlongs, legWindow, locateBus, nextArrival, showEta, closeEta, starEta, window } = new Function(
   ...Object.keys(sandbox),
-  src + '; mapKakaoMap = {}; return { distM, bearingDeg, splitRoute, makePath, projectOnPath, pointAt, buildRoutePaths, routePaths, updateBusMarkers, stationAlongs, legWindow, locateBus, nextArrival, showEta, closeEta, window };',
+  src + '; mapKakaoMap = {}; return { distM, bearingDeg, splitRoute, makePath, projectOnPath, pointAt, buildRoutePaths, routePaths, updateBusMarkers, stationAlongs, legWindow, locateBus, nextArrival, showEta, closeEta, starEta, window };',
 )(...Object.values(sandbox));
 
 // 웹은 srcdoc iframe(location.protocol = 'about:')이라 카카오 SDK가 http로 지도를 부른다 → https 페이지에서 차단됨. 자동 https 승격이 있어야 한다.
@@ -126,6 +128,15 @@ assert.equal(nextArrival('A', '약대', null, hm('08:00')), '주말 운행 없�
 const before = onMap.CustomOverlay;
 showEta('약대', new sandbox.kakao.maps.LatLng(0, 0));
 assert.equal(onMap.CustomOverlay, before + 1);
+// 별표: 누르면 앱에 정류장 이름을 보내고, 앱이 돌려준 목록대로 ☆ → ★
+const sent = [];
+window.Star = { postMessage: (m) => sent.push(m) };
+starEta();
+assert.deepEqual(sent, ['약대']);
+window.setStarred(['약대']);
+assert.match(etaHtml(), /eta-star on/);
+window.setStarred([]);
+assert.doesNotMatch(etaHtml(), /eta-star on/);
 closeEta();
 assert.equal(onMap.CustomOverlay, before);
 

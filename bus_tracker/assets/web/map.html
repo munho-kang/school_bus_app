@@ -44,7 +44,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#f3f4f6;font-family:
 .station-marker{cursor:pointer}
 .eta{position:relative;margin-bottom:12px;background:#fff;border-radius:12px;padding:10px 12px;box-shadow:0 4px 16px rgba(0,0,0,.18);font-size:13px;color:#222;white-space:nowrap}
 .eta:after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#fff}
-.eta b{display:block;font-size:14px;margin-bottom:6px}
+.eta b{display:block;font-size:14px;margin-bottom:6px;padding-right:26px}
+.eta-star{position:absolute;top:4px;right:4px;width:32px;height:32px;border:0;background:none;padding:0;font-size:20px;line-height:32px;color:#b0b8c1;cursor:pointer}
+.eta-star.on{color:#f5b301}
 .eta-row{display:flex;align-items:center;gap:8px;margin-top:4px}
 .eta-badge{width:20px;height:20px;border-radius:50%;color:#fff;font-weight:bold;font-size:12px;display:flex;align-items:center;justify-content:center}
 .eta-live{color:#16a34a;font-size:11px;font-weight:bold}
@@ -309,8 +311,16 @@ function drawBusArrows(busId, pos, bus) {
 // 학교 버스 누리집과 같은 규칙: 정문 출발 후 정류장 하나마다 1분(BUS_STATION_LIST 순서).
 // 운행 중인 버스는 지금 있는 정류장부터 센다. 시간표·쉬는 날 문구는 앱이 window.setSchedule로 넘겨준다.
 // ponytail: 정류장당 1분 고정 — 실제 달린 속도로 보정하려면 여기서 경로 거리(routePaths)를 쓰면 된다.
-var schedule = {}, offText = null, lastBuses = {}, eta = null;
+// 말풍선 오른쪽 위 별표: 누르면 앱에 정류장 이름을 보내고, 앱이 저장한 뒤 window.setStarred로 별표 목록을 돌려준다.
+var schedule = {}, offText = null, lastBuses = {}, eta = null, starred = [];
 window.setSchedule = function(deps, off) { schedule = deps; offText = off; renderEta(); };
+window.setStarred = function(list) { starred = list; renderEta(); };
+function starEta(e) {
+  if (e) e.stopPropagation();
+  if (!eta) return;
+  if (window.Star) window.Star.postMessage(eta.name);                                    // 휴대폰 앱
+  else if (window.parent !== window) window.parent.postMessage('bus-star:' + eta.name, '*');  // 웹(iframe)
+}
 function stationIndex(id, name) {
   var list = typeof BUS_STATION_LIST !== 'undefined' ? BUS_STATION_LIST[id] || [] : [];
   return list.slice(0, -1).indexOf(name);   // 마지막 '정문'은 돌아오는 곳이라 뺀다
@@ -352,7 +362,11 @@ function renderEta() {
     var r = nextArrival(id, eta.name, lastBuses[id], nowMin);
     if (r) rows += '<div class="eta-row"><span class="eta-badge" style="background:' + (id === 'A' ? '#0066FF' : '#00CC66') + '">' + id + '</span>' + etaText(r) + '</div>';
   });
-  eta.overlay.setContent('<div class="eta"><b>' + eta.name + '</b>' + (rows || '도착 정보 없음') + '</div>');
+  var on = starred.indexOf(eta.name) !== -1;
+  var star = '<button class="eta-star' + (on ? ' on' : '') + '" onclick="starEta(event)" aria-label="' + (on ? '별표 해제' : '별표') + '">' + (on ? '★' : '☆') + '</button>';
+  // 말풍선 안을 누르면 지도에 알리지 않는다(안 그러면 지도 '빈 곳 누름'이 먼저 와서 말풍선이 닫히고 ☆가 안 눌린다).
+  var keep = ' onmousedown="kakao.maps.event.preventMap()" ontouchstart="kakao.maps.event.preventMap()"';
+  eta.overlay.setContent('<div class="eta"' + keep + '>' + star + '<b>' + eta.name + '</b>' + (rows || '도착 정보 없음') + '</div>');
 }
 
 // ---------- 내 위치 ----------

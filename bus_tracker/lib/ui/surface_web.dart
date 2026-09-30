@@ -5,10 +5,12 @@ import 'package:flutter/widgets.dart';
 import 'package:web/web.dart' as web;
 
 class MapSurface {
-  MapSurface({required VoidCallback onReady}) {
-    // map.html은 준비되면 부모 창에 'bus-map-ready'를 보낸다.
+  MapSurface({required VoidCallback onReady, required void Function(String stop) onStar}) {
+    // map.html은 준비되면 부모 창에 'bus-map-ready'를, 말풍선 별표를 누르면 'bus-star:정류장'을 보낸다.
     _listener = ((web.MessageEvent e) {
-      if (e.data.dartify() == 'bus-map-ready') onReady();
+      final Object? d = e.data.dartify();
+      if (d == 'bus-map-ready') onReady();
+      if (d is String && d.startsWith('bus-star:')) onStar(d.substring(9));
     }).toJS;
     web.window.addEventListener('message', _listener);
   }

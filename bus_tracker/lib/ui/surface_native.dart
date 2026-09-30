@@ -4,11 +4,12 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'theme.dart';
 
 class MapSurface {
-  MapSurface({required VoidCallback onReady})
+  MapSurface({required VoidCallback onReady, required void Function(String stop) onStar})
     : _controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setBackgroundColor(AppColors.bg)
-        ..addJavaScriptChannel('Ready', onMessageReceived: (_) => onReady());
+        ..addJavaScriptChannel('Ready', onMessageReceived: (_) => onReady())
+        ..addJavaScriptChannel('Star', onMessageReceived: (JavaScriptMessage m) => onStar(m.message));
 
   final WebViewController _controller;
 

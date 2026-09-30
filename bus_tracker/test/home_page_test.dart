@@ -43,6 +43,49 @@ void main() {
     expect(taps, 1);
   });
 
+  test('정류장 도착: 정문 출발 + 정류장 수(분), 지나간 편은 건너뜀', () {
+    expect(nextArrival('A', '학생회관', DateTime(2026, 9, 28, 8, 0)), '08:09'); // 08:05 + 4
+    expect(nextArrival('A', '학생회관', DateTime(2026, 9, 28, 8, 9)), '08:09'); // 지금 도착하는 편
+    expect(nextArrival('A', '학생회관', DateTime(2026, 9, 28, 8, 10)), '08:29');
+    expect(nextArrival('B', '교양동', DateTime(2026, 9, 28, 8, 0)), '08:13'); // 08:10 + 3
+    expect(nextArrival('A', '정문', DateTime(2026, 9, 28, 8, 0)), '08:05');
+    expect(nextArrival('B', '학생회관', DateTime(2026, 9, 28, 18, 55)), '19:01'); // 막차 18:50 + 11
+    expect(nextArrival('B', '학생회관', DateTime(2026, 9, 28, 19, 2)), null);
+    expect(nextArrival('A', '학생회관', DateTime(2026, 9, 27, 9, 0)), null); // 일요일
+    expect(nextArrival('A', '없는정류장', DateTime(2026, 9, 28, 8, 0)), null);
+  });
+
+  testWidgets('지도에서 별표한 정류장이 지도 버튼 위에 나오고, 다시 누르면 빠지며 저장된다', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await tester.pumpWidget(ChangeNotifierProvider<BusService>(create: (_) => BusService(), child: const MyApp()));
+    await tester.pump();
+    expect(find.textContaining('☆를 누르면'), findsOneWidget);
+    await toggleStar('중앙도서관'); // 지도 말풍선의 별표가 부르는 것과 같다
+    await toggleStar('가짜정류장'); // 없는 정류장은 무시
+    await tester.pump();
+    expect(find.text('중앙도서관'), findsOneWidget);
+    expect(find.textContaining('☆를 누르면'), findsNothing);
+    // 별표 정류장이 크게(제목 '내 정류장 도착'), 정문 출발은 작은 한 줄로 아래에
+    expect(find.text('내 정류장 도착'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('중앙도서관')).dy, lessThan(tester.getTopLeft(find.text('정문 출발')).dy));
+    expect((await SharedPreferences.getInstance()).getStringList('starred_stops'), <String>['중앙도서관']);
+    // 별표 줄이 '실시간 버스 보기' 버튼보다 위에 있다
+    expect(tester.getTopLeft(find.text('중앙도서관')).dy, lessThan(tester.getTopLeft(find.text('실시간 버스 보기')).dy));
+    await toggleStar('중앙도서관');
+    await tester.pump();
+    expect(find.text('중앙도서관'), findsNothing);
+    expect(find.text('정문 출발'), findsOneWidget); // 별표가 없으면 다시 정문 출발이 제목
+    expect((await SharedPreferences.getInstance()).getStringList('starred_stops'), <String>[]);
+  });
+
+  test('정류장 남은 시간: 정문 출발과 같은 말투', () {
+    expect(stopWaitText('A', '학생회관', DateTime(2026, 9, 28, 8, 0)), '9분 후'); // 08:09 도착
+    expect(stopWaitText('A', '학생회관', DateTime(2026, 9, 28, 6, 0)), '첫차');
+    expect(stopWaitText('B', '학생회관', DateTime(2026, 9, 28, 11, 45)), '1시간 16분 후'); // 12:50 + 11 = 13:01
+    expect(stopWaitText('B', '학생회관', DateTime(2026, 9, 28, 19, 2)), '운행 종료');
+    expect(stopWaitText('A', '학생회관', DateTime(2026, 9, 27, 9, 0)), '주말 운행 없음');
+  });
+
   test('안내판: 새벽엔 첫차', () => expect(waitText('A', DateTime(2026, 9, 28, 0, 53)), '첫차'));
   test('안내판: 2분 안도 몇 분 후', () => expect(waitText('A', DateTime(2026, 9, 28, 8, 3)), '2분 후'));
   test('곧 출발: 5분 안인지', () {

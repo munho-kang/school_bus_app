@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/bus_service.dart';
 import '../models/bus.dart';
 import 'theme.dart';
@@ -106,6 +107,46 @@ String? nextDeparture(String busId, DateTime now, [Bus? bus]) {
   return null;
 }
 
+/// 코스별 정류장 순서(학교 버스 누리집 conf.js의 BUS_STATION_LIST, 돌아오는 마지막 정문은 뺌).
+/// 정문 출발 뒤 정류장 하나에 1분(map.html과 같은 규칙).
+const Map<String, List<String>> stationOrder = <String, List<String>>{
+  'A': <String>['정문', '약대', '해대1호관', '본관', '학생회관', '인문대(서)', '학생생활관',
+    '인문대(동)', '중앙도서관', '의대1호관', '공대4호관', '해대4호관', '교양동', '해대1호관(서)'],
+  'B': <String>['정문', '약대', '해대1호관', '교양동', '해대4호관', '공대4호관', '의대1호관',
+    '중앙도서관', '인문대(동)', '학생생활관', '인문대(서)', '학생회관', '본관', '해대1호관(서)'],
+};
+
+/// [stop]에 다음 버스가 도착하는 시각('08:09'). 막차가 지났거나 주말·공휴일이거나 그 코스가 서지 않으면 null.
+/// ponytail: 시간표로만 센다. 운행 중인 버스 위치까지 반영하려면 map.html의 nextArrival처럼 버스가 있는 정류장부터 센다.
+String? nextArrival(String busId, String stop, DateTime now) {
+  final int m = stationOrder[busId]!.indexOf(stop);
+  if (m < 0 || dayOff(now) != null) return null;
+  for (final String t in departures[busId]!) {
+    if (minutesUntil(t, now) + m < 0) continue;
+    final int at = int.parse(t.substring(0, 2)) * 60 + int.parse(t.substring(3)) + m;
+    return '${(at ~/ 60).toString().padLeft(2, '0')}:${(at % 60).toString().padLeft(2, '0')}';
+  }
+  return null;
+}
+
+/// 지도 말풍선에서 별표한 정류장(누른 순서, 기기에 저장). 홈 카드가 이 정류장들의 도착 시각을 보여준다.
+final ValueNotifier<List<String>> starredStops = ValueNotifier<List<String>>(<String>[]);
+const String _starKey = 'starred_stops';
+
+Future<void> loadStarred() async {
+  final List<String> saved = (await SharedPreferences.getInstance()).getStringList(_starKey) ?? <String>[];
+  starredStops.value = saved.where(stationOrder['A']!.contains).toList();
+}
+
+/// 별표를 켜고 끈다. 지도에서 온 이름이라 실제 정류장인지 먼저 본다.
+Future<void> toggleStar(String stop) async {
+  if (!stationOrder['A']!.contains(stop)) return;
+  final List<String> list = List<String>.of(starredStops.value);
+  if (!list.remove(stop)) list.add(stop);
+  starredStops.value = list;
+  await (await SharedPreferences.getInstance()).setStringList(_starKey, list);
+}
+
 /// 방금 출발 시각이 된(또는 지난 지 [lateGrace]분 안인) 편이 있는지. 이때만 실제 위치를 확인하면 된다.
 bool departingNow(DateTime now) =>
     dayOff(now) == null &&
@@ -148,6 +189,7 @@ class _MapViewState extends State<MapView> {
   void initState() {
     super.initState();
     _surface = MapSurface(
+      onStar: toggleStar,
       onReady: () {
         if (mounted && !_ready) {
           _ready = true;
@@ -157,9 +199,11 @@ class _MapViewState extends State<MapView> {
           final DateTime now = DateTime.now();
           final String off = jsonEncode(dayOff(now) == null ? null : noServiceText(now));
           _surface.run('window.setSchedule && window.setSchedule(${jsonEncode(departures)}, $off);').onError((_, _) {});
+          _pushStarred();
         }
       },
     );
+    starredStops.addListener(_pushStarred);
     _load();
     _startMyLocation();
   }
@@ -180,6 +224,12 @@ class _MapViewState extends State<MapView> {
     } catch (e) {
       debugPrint('location unavailable: $e');
     }
+  }
+
+  // 말풍선 별표(☆/★)가 저장된 목록을 따르게 한다.
+  void _pushStarred() {
+    if (!_ready) return;
+    _surface.run('window.setStarred && window.setStarred(${jsonEncode(starredStops.value)});').onError((_, _) {});
   }
 
   void _pushLocation(Position p) {
@@ -349,6 +399,7 @@ class _MapViewState extends State<MapView> {
   @override
   void dispose() {
     _locSub?.cancel();
+    starredStops.removeListener(_pushStarred);
     _surface.dispose();
     _lastSig = null;
     super.dispose();

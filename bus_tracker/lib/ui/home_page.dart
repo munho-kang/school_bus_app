@@ -1,4 +1,4 @@
-// 앱 첫 화면. 위는 내 시간표(메인), 그 아래 작은 그라데이션 히어로 카드(A·B 코스 정문 다음 출발, 누르면 실시간 지도).
+// 앱 첫 화면. 위는 내 시간표(메인), 그 아래 작은 그라데이션 히어로 카드(지도에서 별표한 정류장 도착을 크게, 정문 출발은 작게, 누르면 실시간 지도).
 // 화면 끝에서 더 아래로 내리면(휠·손가락) 누른 것처럼 실시간 지도 화면으로 넘어간다.
 // 포털·학사일정·공지사항·학식 바로가기는 오른쪽 위 ≡ 버튼으로 펼치는 서랍 안에 있다.
 // 포털은 학교 포털을(웹에선 새 탭으로), 나머지는 각 화면을 띄운다.
@@ -26,12 +26,21 @@ int? minutesLeft(String busId, DateTime now, [Bus? bus]) {
 }
 
 /// 코스 줄 오른쪽 문구. 한 시간이 넘게 남은 그날 첫차는 '첫차'. (5분 안이면 앞에 '곧 출발' 칩이 붙는다.)
-String waitText(String busId, DateTime now, [Bus? bus]) {
-  final int? mins = minutesLeft(busId, now, bus);
+String waitText(String busId, DateTime now, [Bus? bus]) =>
+    _waitText(minutesLeft(busId, now, bus), nextDeparture(busId, now) == departures[busId]!.first, now);
+
+/// 별표한 정류장 줄 오른쪽 문구. 정문 출발과 같은 말투('3분 후', '첫차', '운행 종료').
+String stopWaitText(String busId, String stop, DateTime now) {
+  final String? at = nextArrival(busId, stop, now);
+  final bool first = at == nextArrival(busId, stop, DateTime(now.year, now.month, now.day));
+  return _waitText(at == null ? null : minutesUntil(at, now), first, now);
+}
+
+String _waitText(int? mins, bool first, DateTime now) {
   if (mins == null) return noServiceText(now);
   if (mins < 0) return '${-mins}분 지연';
   if (mins < 60) return '$mins분 후';
-  if (nextDeparture(busId, now) == departures[busId]!.first) return '첫차';
+  if (first) return '첫차';
   return mins % 60 == 0 ? '${mins ~/ 60}시간 후' : '${mins ~/ 60}시간 ${mins % 60}분 후';
 }
 
@@ -62,6 +71,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    loadStarred();
     // 카드 시계와 '몇 분 후'를 갱신한다. 분이 바뀔 때만 다시 그린다.
     // 출발 시각 전후 몇 분 동안만 실제 위치를 받아, 버스가 정문을 떠났는지 확인한다.
     _tick = Timer.periodic(const Duration(seconds: 5), (_) {
@@ -241,7 +251,8 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// 정문 출발 카드: 머리줄(정문 출발 · 현재 시각), 코스별 다음 출발, 맨 아래 지도 열기.
+/// 버스 카드. 지도에서 별표한 정류장이 주인공이다: 정류장마다 코스별 다음 도착을 큰 글씨로,
+/// 정문 출발은 그 아래 작은 한 줄로. 별표한 정류장이 없으면 예전처럼 정문 출발을 크게 보여 주고 별표하는 법을 알려 준다.
 /// 색이 상태를 말한다 — 둘 다 운행 종료(또는 주말·공휴일)면 회색, 그 밖엔 초록.
 class _DepartureHero extends StatelessWidget {
   const _DepartureHero({required this.now, required this.onTap});
@@ -255,65 +266,109 @@ class _DepartureHero extends StatelessWidget {
     final BusService svc = context.watch<BusService>();
     // 받은 지 오래된 위치는 믿지 않고 시간표대로 보여준다.
     final bool fresh = svc.isFresh(DateTime.now());
-    final Bus? busA = fresh ? svc.busA : null, busB = fresh ? svc.busB : null;
-    final List<String> waits = <String>[waitText('A', now, busA), waitText('B', now, busB)];
+    final Map<String, Bus?> buses = <String, Bus?>{'A': fresh ? svc.busA : null, 'B': fresh ? svc.busB : null};
+    final List<String> waits = <String>[for (final String id in buses.keys) waitText(id, now, buses[id])];
     final HeroTone tone = waits.every((String w) => w == noServiceText(now)) ? HeroTone.off : HeroTone.live;
     const TextStyle head = TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white70);
-    return HeroCard(
-      tone: tone,
-      onTap: onTap,
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const Icon(Icons.directions_bus_rounded, size: 18, color: Colors.white70),
-              const SizedBox(width: 6),
-              const Text('정문 출발', style: head),
-              const Spacer(),
-              Text(clock, style: head.copyWith(fontFeatures: const <FontFeature>[FontFeature.tabularFigures()])),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _CourseRow(id: 'A', now: now, bus: busA, wait: waits[0]),
-          const SizedBox(height: 6),
-          _CourseRow(id: 'B', now: now, bus: busB, wait: waits[1]),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Row(
+    return ValueListenableBuilder<List<String>>(
+      valueListenable: starredStops,
+      builder: (BuildContext context, List<String> stops, _) => HeroCard(
+        tone: tone,
+        onTap: onTap,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
               children: <Widget>[
-                Text('실시간 버스 보기', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                Spacer(),
-                Icon(Icons.map_outlined, size: 20),
-                SizedBox(width: 2),
-                Icon(Icons.chevron_right),
+                const Icon(Icons.directions_bus_rounded, size: 18, color: Colors.white70),
+                const SizedBox(width: 6),
+                Text(stops.isEmpty ? '정문 출발' : '내 정류장 도착', style: head),
+                const Spacer(),
+                Text(clock, style: head.copyWith(fontFeatures: const <FontFeature>[FontFeature.tabularFigures()])),
               ],
             ),
-          ),
-        ],
+            if (stops.isEmpty) ...<Widget>[
+              for (final String id in buses.keys) ...<Widget>[
+                const SizedBox(height: 6),
+                _CourseRow(
+                  id: id,
+                  time: nextDeparture(id, now, buses[id]),
+                  mins: minutesLeft(id, now, buses[id]),
+                  wait: waitText(id, now, buses[id]),
+                  soon: '곧 출발',
+                ),
+              ],
+              const Padding(
+                padding: EdgeInsets.fromLTRB(4, 10, 4, 0),
+                child: Text(
+                  '지도에서 정류장을 누르고 ☆를 누르면 여기에 도착 시간이 나와요',
+                  style: TextStyle(fontSize: 12.5, color: Colors.white70),
+                ),
+              ),
+            ] else ...<Widget>[
+              for (final String stop in stops) ...<Widget>[
+                const SizedBox(height: 10),
+                Row(
+                  children: <Widget>[
+                    const Icon(Icons.star_rounded, size: 18, color: Color(0xFFFFD54F)),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(stop, maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
+                for (final String id in buses.keys) ...<Widget>[
+                  const SizedBox(height: 6),
+                  _CourseRow(
+                    id: id,
+                    time: nextArrival(id, stop, now),
+                    mins: nextArrival(id, stop, now) == null ? null : minutesUntil(nextArrival(id, stop, now)!, now),
+                    wait: stopWaitText(id, stop, now),
+                    soon: '곧 도착',
+                  ),
+                ],
+              ],
+              const SizedBox(height: 10),
+              _GateRow(times: <String, String?>{for (final String id in buses.keys) id: nextDeparture(id, now, buses[id])}),
+            ],
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Row(
+                children: <Widget>[
+                  Text('실시간 버스 보기', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                  Spacer(),
+                  Icon(Icons.map_outlined, size: 20),
+                  SizedBox(width: 2),
+                  Icon(Icons.chevron_right),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+/// 큰 코스 줄: 번호판, 큰 시각, 오른쪽에 남은 시간(5분 안이면 앞에 흰 바탕 빨간 글씨 칩).
 class _CourseRow extends StatelessWidget {
-  const _CourseRow({required this.id, required this.now, required this.bus, required this.wait});
+  const _CourseRow({required this.id, required this.time, required this.mins, required this.wait, required this.soon});
 
   final String id;
-  final DateTime now;
-  final Bus? bus;
+  final String? time;
+  final int? mins;
   final String wait;
+  final String soon; // '곧 출발' · '곧 도착'
 
   @override
   Widget build(BuildContext context) {
-    final String? t = nextDeparture(id, now, bus);
-    final int? mins = minutesLeft(id, now, bus);
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
       decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(14)),
@@ -322,11 +377,11 @@ class _CourseRow extends StatelessWidget {
           CourseBadge(id, size: 26),
           const SizedBox(width: 12),
           Text(
-            t ?? '--:--',
+            time ?? '--:--',
             style: TextStyle(
               fontSize: 21,
               fontWeight: FontWeight.w700,
-              color: t == null ? Colors.white60 : Colors.white,
+              color: time == null ? Colors.white60 : Colors.white,
               fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
             ),
           ),
@@ -336,12 +391,11 @@ class _CourseRow extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerRight,
-              // 5분 안이면 앞에 흰 바탕 빨간 글씨 '곧 출발' 칩.
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  if (mins != null && mins <= 5) ...<Widget>[
-                    const Pill('곧 출발', bg: Colors.white, fg: AppColors.danger),
+                  if (mins != null && mins! <= 5) ...<Widget>[
+                    Pill(soon, bg: Colors.white, fg: AppColors.danger),
                     const SizedBox(width: 8),
                   ],
                   Text(wait, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
@@ -349,6 +403,43 @@ class _CourseRow extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 작은 정문 출발 한 줄: '정문 출발', 오른쪽에 코스별 다음 출발 시각.
+class _GateRow extends StatelessWidget {
+  const _GateRow({required this.times});
+
+  final Map<String, String?> times;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(14)),
+      child: Row(
+        children: <Widget>[
+          const Expanded(
+            child: Text('정문 출발', maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white70)),
+          ),
+          for (final MapEntry<String, String?> e in times.entries) ...<Widget>[
+            const SizedBox(width: 10),
+            CourseBadge(e.key, size: 20),
+            const SizedBox(width: 6),
+            Text(
+              e.value ?? '--:--',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: e.value == null ? Colors.white60 : Colors.white,
+                fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
         ],
       ),
     );
