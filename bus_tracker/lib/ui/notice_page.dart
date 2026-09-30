@@ -117,7 +117,6 @@ class _NoticePageState extends State<NoticePage> {
   Widget _hero() {
     final List<Notice> fresh = _items.where((Notice n) => isNewNotice(n.date, _today)).toList();
     return HeroCard(
-      fly: false, // 홈의 버스 카드가 이리로 날아오지 않게
       tone: fresh.isEmpty ? HeroTone.off : HeroTone.live,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

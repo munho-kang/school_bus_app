@@ -153,6 +153,10 @@ class _MapViewState extends State<MapView> {
           _ready = true;
           _push(context.read<BusService>());
           if (_lastPos != null) _pushLocation(_lastPos!);
+          // 정류장을 누르면 뜨는 도착 예정 말풍선이 쓸 시간표와 오늘 쉬는 까닭.
+          final DateTime now = DateTime.now();
+          final String off = jsonEncode(dayOff(now) == null ? null : noServiceText(now));
+          _surface.run('window.setSchedule && window.setSchedule(${jsonEncode(departures)}, $off);').onError((_, _) {});
         }
       },
     );

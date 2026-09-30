@@ -192,8 +192,6 @@ Widget _bubble(double size, double alpha) => Container(
     );
 
 /// 상태를 색으로 말하는 그라데이션 카드(운행 중 초록 · 운행 종료 회색). 안의 글씨·아이콘은 흰색.
-/// 홈 카드와 지도 상단 패널이 같은 Hero('board')라, 누르면 카드가 그대로 지도 위로 옮겨 간다 — 한 화면에 하나만 둔다.
-/// 다른 화면(공지 등)의 머리 카드는 fly: false로 날아가는 효과 없이 쓴다.
 class HeroCard extends StatelessWidget {
   const HeroCard({
     super.key,
@@ -202,18 +200,13 @@ class HeroCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(20),
     this.radius = const BorderRadius.all(Radius.circular(22)),
     this.onTap,
-    this.fly = true,
   });
 
   final HeroTone tone;
-  final bool fly;
   final Widget child;
   final EdgeInsetsGeometry padding;
   final BorderRadius radius;
   final VoidCallback? onTap;
-
-  static Widget _shuttle(BuildContext _, Animation<double> _, HeroFlightDirection _, BuildContext _, BuildContext _) =>
-      DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: _heroColors[HeroTone.live]!)));
 
   @override
   Widget build(BuildContext context) {
@@ -245,8 +238,7 @@ class HeroCard extends StatelessWidget {
         ),
       ),
     );
-    final Widget card = fly ? Hero(tag: 'board', flightShuttleBuilder: _shuttle, child: body) : body;
-    return onTap == null ? card : Pressable(scale: 0.97, child: card);
+    return onTap == null ? body : Pressable(scale: 0.97, child: body);
   }
 }
 
