@@ -87,6 +87,7 @@ function initMap() {
     center: new kakao.maps.LatLng(33.455213, 126.561459),
     level: 4
   });
+  mapKakaoMap.setMaxLevel(5);   // 캠퍼스 전체가 한 화면에 들어오는 정도까지만 축소
   kakao.maps.event.addListener(mapKakaoMap, 'zoom_changed', updateStationVisibility);
   kakao.maps.event.addListener(mapKakaoMap, 'click', closeEta);
   drawBusRoute(window.BUS_ROUTE_DATA || (typeof BUS_ROUTE_DATA !== 'undefined' ? BUS_ROUTE_DATA : null));
