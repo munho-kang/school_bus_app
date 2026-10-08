@@ -34,15 +34,16 @@
 
 | 1. 홈 | 2. ≡ 메뉴 | 3. 실시간 버스 지도 |
 | :---: | :---: | :---: |
-| <img src="docs/screens/home.png" width="250" alt="홈 화면: 내 시간표와 별표한 정류장 버스 도착 시각"> | <img src="docs/screens/drawer.png" width="250" alt="메뉴: 포털, 학사일정, 공지사항, 학식 메뉴"> | <img src="docs/screens/map.png" width="250" alt="카카오 지도 위 셔틀 노선과 정류장"> |
-| 내 시간표 + 별표한 정류장 도착 시각 | 포털 · 학사일정 · 공지 · 학식으로 이동 | A·B코스 노선과 다음 출발 시각 |
+| <img src="docs/screens/home.png" width="250" alt="홈 화면: 내 시간표와 별표한 정류장 버스 도착 시각"> | <img src="docs/screens/drawer.png" width="250" alt="메뉴: 포털, 학사일정, 공지사항, 학식 메뉴"> | <img src="docs/screens/map.png" width="250" alt="카카오 지도 위를 달리는 A·B 셔틀버스"> |
+| 내 시간표 + 별표한 정류장 도착 시각 | 포털 · 학사일정 · 공지 · 학식으로 이동 | A·B 버스 위치와 진행 방향 (3초마다 갱신) |
 
 | 4. 학사일정 | 5. 공지사항 | 6. 학식 메뉴 |
 | :---: | :---: | :---: |
 | <img src="docs/screens/schedule.png" width="250" alt="학사일정 달력"> | <img src="docs/screens/notice.png" width="250" alt="공지사항 목록"> | <img src="docs/screens/menu.png" width="250" alt="식당별 이번 주 식단"> |
 | 달력 + 날짜별 일정, D-day 표시 | 분류별 공지, 최근 3일 새 글 개수 | 식당 5곳의 날짜별 식단 |
 
-> 시간표는 예시로 넣은 수업이고, 버스 카드가 잘 보이도록 평일 오전 10시 20분 기준으로 찍었어요. 공지·학식·학사일정은 실제 데이터예요.
+> 시간표는 예시로 넣은 수업이고, 버스 카드가 잘 보이도록 평일 오전 10시 20분 기준으로 찍었어요.
+> 지도의 버스 위치는 운행 시간이 아닐 때 찍어서 예시 위치를 넣었어요. 공지·학식·학사일정은 실제 데이터예요.
 
 ## 데이터는 어떻게 오나요?
 
