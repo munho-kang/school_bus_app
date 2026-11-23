@@ -1,10 +1,9 @@
-// 앱을 켜면 지도가 아니라 '실시간 버스 보기'·≡ 메뉴(포털 등 바로가기) 버튼이 있는 첫 화면이 뜨는지 검사한다.
+// 앱을 켜면 지도가 아니라 작은 버스 버튼('실시간 버스 보기')·≡ 메뉴(포털 등 바로가기)가 있는 첫 화면이 뜨는지 검사한다.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bus_tracker/main.dart';
-import 'package:bus_tracker/models/bus.dart';
 import 'package:bus_tracker/services/bus_service.dart';
 import 'package:bus_tracker/ui/home_page.dart';
 import 'package:bus_tracker/ui/map_view.dart';
@@ -14,8 +13,12 @@ void main() {
   testWidgets('첫 화면에 버튼이 있고 지도는 없음', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await tester.pumpWidget(ChangeNotifierProvider<BusService>(create: (_) => BusService(), child: const MyApp()));
-    expect(find.text('실시간 버스 보기'), findsOneWidget);
     expect(find.text('내 시간표'), findsOneWidget);
+    // 버스 버튼은 '제주대 캠퍼스'와 ≡ 사이, 시간표보다 위에 있다.
+    final Rect bus = tester.getRect(find.byTooltip('실시간 버스 보기'));
+    expect(bus.left, greaterThan(tester.getRect(find.text('제주대 캠퍼스')).right));
+    expect(bus.right, lessThanOrEqualTo(tester.getRect(find.byTooltip('메뉴')).left));
+    expect(bus.bottom, lessThan(tester.getRect(find.text('내 시간표')).top));
     // 바로가기는 처음엔 숨어 있다가 오른쪽 위 ≡ 버튼을 누르면 펼쳐진다.
     expect(find.text('포털 접속하기'), findsNothing);
     await tester.tap(find.byTooltip('메뉴'));
@@ -55,51 +58,28 @@ void main() {
     expect(nextArrival('A', '없는정류장', DateTime(2026, 9, 28, 8, 0)), null);
   });
 
-  testWidgets('지도에서 별표한 정류장이 지도 버튼 위에 나오고, 다시 누르면 빠지며 저장된다', (WidgetTester tester) async {
+  testWidgets('버스 버튼: 별표가 없으면 정문, 별표하면 그 정류장(여럿이면 마지막에 별표한 곳)만 나오며 저장된다', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await tester.pumpWidget(ChangeNotifierProvider<BusService>(create: (_) => BusService(), child: const MyApp()));
     await tester.pump();
-    expect(find.textContaining('☆를 누르면'), findsOneWidget);
+    expect(find.text('정문'), findsOneWidget);
     await toggleStar('중앙도서관'); // 지도 말풍선의 별표가 부르는 것과 같다
     await toggleStar('가짜정류장'); // 없는 정류장은 무시
     await tester.pump();
     expect(find.text('중앙도서관'), findsOneWidget);
-    expect(find.textContaining('☆를 누르면'), findsNothing);
-    // 별표 정류장이 크게(제목 '내 정류장 도착'), 정문 출발은 작은 한 줄로 아래에
-    expect(find.text('내 정류장 도착'), findsOneWidget);
-    expect(tester.getTopLeft(find.text('중앙도서관')).dy, lessThan(tester.getTopLeft(find.text('정문 출발')).dy));
+    expect(find.text('정문'), findsNothing);
     expect((await SharedPreferences.getInstance()).getStringList('starred_stops'), <String>['중앙도서관']);
-    // 별표 줄이 '실시간 버스 보기' 버튼보다 위에 있다
-    expect(tester.getTopLeft(find.text('중앙도서관')).dy, lessThan(tester.getTopLeft(find.text('실시간 버스 보기')).dy));
+    await toggleStar('학생회관');
+    await tester.pump();
+    expect(find.text('학생회관'), findsOneWidget);
+    expect(find.text('중앙도서관'), findsNothing);
+    await toggleStar('학생회관');
     await toggleStar('중앙도서관');
     await tester.pump();
-    expect(find.text('중앙도서관'), findsNothing);
-    expect(find.text('정문 출발'), findsOneWidget); // 별표가 없으면 다시 정문 출발이 제목
+    expect(find.text('정문'), findsOneWidget); // 별표를 다 풀면 다시 정문
     expect((await SharedPreferences.getInstance()).getStringList('starred_stops'), <String>[]);
   });
 
-  test('정류장 남은 시간: 정문 출발과 같은 말투', () {
-    expect(stopWaitText('A', '학생회관', DateTime(2026, 9, 28, 8, 0)), '9분 후'); // 08:09 도착
-    expect(stopWaitText('A', '학생회관', DateTime(2026, 9, 28, 6, 0)), '첫차');
-    expect(stopWaitText('B', '학생회관', DateTime(2026, 9, 28, 11, 45)), '1시간 16분 후'); // 12:50 + 11 = 13:01
-    expect(stopWaitText('B', '학생회관', DateTime(2026, 9, 28, 19, 2)), '운행 종료');
-    expect(stopWaitText('A', '학생회관', DateTime(2026, 9, 27, 9, 0)), '주말 운행 없음');
-  });
-
-  test('안내판: 새벽엔 첫차', () => expect(waitText('A', DateTime(2026, 9, 28, 0, 53)), '첫차'));
-  test('안내판: 2분 안도 몇 분 후', () => expect(waitText('A', DateTime(2026, 9, 28, 8, 3)), '2분 후'));
-  test('곧 출발: 5분 안인지', () {
-    expect(minutesLeft('A', DateTime(2026, 9, 28, 8, 0)), 5);
-    expect(minutesLeft('A', DateTime(2026, 9, 28, 7, 59)), 6);
-    expect(minutesLeft('B', DateTime(2026, 9, 28, 19, 0)), null);
-  });
-  test('안내판: 몇 분 후', () => expect(waitText('B', DateTime(2026, 9, 28, 8, 0)), '10분 후'));
-  test('안내판: 낮 공백은 시간·분', () => expect(waitText('A', DateTime(2026, 9, 28, 11, 21)), '1시간 19분 후'));
-  test('안내판: 정문에서 늦게 떠나면 몇 분 지연', () {
-    final Bus gate = Bus(busId: 'A', latitude: 0, longitude: 0, station: '정문', status: 'waiting', isRecent: true);
-    expect(waitText('A', DateTime(2026, 9, 28, 8, 47), gate), '2분 지연');
-  });
-  test('안내판: 주말은 운행 없음', () => expect(waitText('A', DateTime(2026, 9, 27, 9, 0)), '주말 운행 없음'));
   test('버스 위치는 받은 지 30초 안일 때만 믿는다', () {
     final BusService svc = BusService();
     final DateTime t = DateTime(2026, 9, 28, 9, 30);
@@ -109,7 +89,6 @@ void main() {
     svc.lastFetchedAt = t.subtract(const Duration(minutes: 40));
     expect(svc.isFresh(t), isFalse); // 지난 출발 때 받은 것
   });
-  test('안내판: 막차 뒤 운행 종료', () => expect(waitText('B', DateTime(2026, 9, 28, 19, 0)), '운행 종료'));
   test('홈 학사일정 줄: 가장 가까운 남은 일정', () => expect(nextScheduleText(DateTime(2026, 9, 27)), startsWith('진행 중 · ')));
   test('홈 학사일정 줄: 다른 해면 표시 안 함', () => expect(nextScheduleText(DateTime(2027, 3, 1)), isNull));
 }
