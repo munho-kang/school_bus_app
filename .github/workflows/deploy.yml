@@ -25,7 +25,7 @@ jobs:
       run:
         working-directory: bus_tracker
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.0
@@ -35,8 +35,8 @@ jobs:
       - run: flutter test
       - run: node test/map_html_check.mjs
       - run: flutter build web --release --base-href /school_bus_app/
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: bus_tracker/build/web
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
