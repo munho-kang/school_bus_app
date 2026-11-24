@@ -1,11 +1,9 @@
 // 앱 첫 화면. 맨 위 제목 줄에 '제주대 캠퍼스' · 작은 버스 버튼 · ≡ 메뉴가 나란히 있고, 그 아래가 내 시간표(메인).
 // 버스 버튼은 지도에서 별표한 정류장(없으면 정문)의 다음 도착 시각만 보여 주고, 누르면 실시간 지도로 간다.
-// 화면 끝에서 더 아래로 내려도(휠·손가락) 버튼을 누른 것처럼 실시간 지도 화면으로 넘어간다.
 // 시간표 아래엔 친구 이름 줄(누르면 친구 시간표). 포털·학사일정·공지사항·학식 바로가기와 내 시간표 QR은 오른쪽 위 ≡ 버튼으로 펼치는 서랍 안에 있다.
 // 포털은 학교 포털을(웹에선 새 탭으로), 나머지는 각 화면을 띄운다.
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/academic_schedule.dart';
@@ -40,8 +38,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   DateTime _now = DateTime.now();
   late final Timer _tick;
-  final ScrollController _scroll = ScrollController();
-  double _pull = 0; // 화면 끝에서 손가락을 더 올린 거리.
   bool _inMap = false; // 지도 화면을 두 번 겹쳐 열지 않게.
 
   @override
@@ -60,35 +56,13 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _tick.cancel();
-    _scroll.dispose();
     super.dispose();
-  }
-
-  // 손가락: 화면 끝에 닿은 뒤 손가락을 80 넘게 더 올리면 지도로. (아이폰은 끝에서 화면이 덜 늘어나서, 늘어난 양 대신 손가락 이동 거리를 잰다.)
-  bool _onScroll(ScrollNotification n) {
-    final DragUpdateDetails? drag = switch (n) {
-      ScrollUpdateNotification(:final DragUpdateDetails? dragDetails) => dragDetails,
-      OverscrollNotification(:final DragUpdateDetails? dragDetails) => dragDetails,
-      _ => null,
-    };
-    if (n is ScrollStartNotification) _pull = 0;
-    if (drag != null && n.metrics.extentAfter == 0) _pull -= drag.delta.dy;
-    if (_pull > 80) _openMap();
-    return false;
-  }
-
-  // 휠·트랙패드: 이미 맨 아래인데 또 내리면 지도로. (끝에선 화면이 안 움직여 스크롤 알림이 없어 휠을 직접 본다.)
-  void _onWheel(PointerSignalEvent e) {
-    if (e is PointerScrollEvent && e.scrollDelta.dy > 0 && _scroll.hasClients && _scroll.position.extentAfter == 0) {
-      _openMap();
-    }
   }
 
   // 폴링은 지도를 보는 동안에만 돈다. push가 끝나는 시점(뒤로가기)에 멈춘다.
   Future<void> _openMap() async {
     if (_inMap) return;
     _inMap = true;
-    _pull = 0;
     final BusService svc = context.read<BusService>()..start();
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const MapView()));
     svc.stop();
@@ -156,76 +130,63 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       body: SafeArea(
-        // 빈 곳까지 화면 전체가 스크롤을 받는다(지도에서 ← 누른 뒤 커서가 구석에 있어도 내리면 지도로).
-        child: Listener(
-          onPointerSignal: _onWheel,
-          child: NotificationListener<ScrollNotification>(
-            onNotification: _onScroll,
-            child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints box) => SingleChildScrollView(
-                controller: _scroll,
-                // 내용이 화면보다 짧아도 끌어내릴 수 있게(그래야 지도로 넘어간다).
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints box) => SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: math.max(0, box.maxHeight - 40)), // 40 = 위아래 여백
+              // 휴대폰에선 카드를 맨 위에, 넓은 화면(웹)에선 가운데에.
+              child: Align(
+                alignment: box.maxWidth < 600 ? Alignment.topCenter : Alignment.center,
+                // 컴퓨터(웹)처럼 넓은 화면에서 카드가 끝까지 늘어나지 않게 폭을 제한한다.
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: math.max(0, box.maxHeight - 40)), // 40 = 위아래 여백
-                  // 휴대폰에선 카드를 맨 위에, 넓은 화면(웹)에선 가운데에.
-                  child: Align(
-                    alignment: box.maxWidth < 600 ? Alignment.topCenter : Alignment.center,
-                    // 컴퓨터(웹)처럼 넓은 화면에서 카드가 끝까지 늘어나지 않게 폭을 제한한다.
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 440),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4),
-                            child: Row(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Row(
+                          children: <Widget>[
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Text(
-                                      '${_now.month}월 ${_now.day}일 ${week[_now.weekday - 1]}요일',
-                                      style: const TextStyle(fontSize: 15, color: AppColors.textSub),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    const Text(
-                                      '제주대 캠퍼스',
-                                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
-                                    ),
-                                  ],
+                                Text(
+                                  '${_now.month}월 ${_now.day}일 ${week[_now.weekday - 1]}요일',
+                                  style: const TextStyle(fontSize: 15, color: AppColors.textSub),
                                 ),
-                                const SizedBox(width: 6),
-                                // 제목과 ≡ 사이 남는 자리에 버스 버튼. 폭 375부터 제 크기, 360에선 0.9배로 통째로 줄어든다.
-                                // ponytail: 폭 340 아래나 큰 글씨 설정에선 버튼이 많이 작아진다. 문제가 되면 버튼을 제목 아랫줄로 내린다.
-                                Expanded(
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerRight,
-                                    child: _BusButton(now: _now, onTap: _openMap),
-                                  ),
-                                ),
-                                Builder(
-                                  builder: (BuildContext ctx) => Pressable(
-                                    scale: 0.9,
-                                    child: IconButton(
-                                      icon: const Icon(Icons.menu, size: 28),
-                                      tooltip: '메뉴',
-                                      onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-                                    ),
-                                  ),
-                                ),
+                                const SizedBox(height: 4),
+                                const Text('제주대 캠퍼스', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          TimetableCard(now: _now),
-                          const SizedBox(height: 12),
-                          const FriendsRow(),
-                        ],
+                            const SizedBox(width: 6),
+                            // 제목과 ≡ 사이 남는 자리에 버스 버튼. 폭 375부터 제 크기, 360에선 0.9배로 통째로 줄어든다.
+                            // ponytail: 폭 340 아래나 큰 글씨 설정에선 버튼이 많이 작아진다. 문제가 되면 버튼을 제목 아랫줄로 내린다.
+                            Expanded(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: _BusButton(now: _now, onTap: _openMap),
+                              ),
+                            ),
+                            Builder(
+                              builder: (BuildContext ctx) => Pressable(
+                                scale: 0.9,
+                                child: IconButton(
+                                  icon: const Icon(Icons.menu, size: 28),
+                                  tooltip: '메뉴',
+                                  onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      TimetableCard(now: _now),
+                      const SizedBox(height: 12),
+                      const FriendsRow(),
+                    ],
                   ),
                 ),
               ),
