@@ -1,5 +1,5 @@
 // 내 수업 시간표. 홈 화면에 월~금 일주일 표로 보여주고, 빈 곳의 '추가'나 수업 칸을 눌러 넣고·고치고·지운다.
-// 이 기기(휴대폰 앱 또는 웹 브라우저)에만 저장된다 — 다른 사람에겐 보이지 않는다.
+// 이 기기(휴대폰 앱 또는 웹 브라우저)에만 저장된다 — 내가 QR·코드를 보여 준 친구만 볼 수 있다(friends.dart).
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/cupertino.dart';
@@ -32,6 +32,12 @@ class Lesson {
 String encodeLessons(List<Lesson> ls) => jsonEncode(ls.map((Lesson l) => l.toJson()).toList());
 List<Lesson> decodeLessons(String s) =>
     (jsonDecode(s) as List<dynamic>).map((dynamic j) => Lesson.fromJson(j as Map<String, dynamic>)).toList();
+
+/// 이 기기에 저장된 내 수업들. 없으면 빈 목록.
+Future<List<Lesson>> loadLessons() async {
+  final String? s = (await SharedPreferences.getInstance()).getString(_key);
+  return s == null ? <Lesson>[] : decodeLessons(s);
+}
 
 /// 표에 그릴 시간 범위(정시 단위). 가장 이른 수업의 시작 시(時)부터 가장 늦은 수업이 끝나는 시까지.
 (int, int) hourRange(List<Lesson> ls) {
@@ -71,9 +77,8 @@ class _TimetableCardState extends State<TimetableCard> {
   @override
   void initState() {
     super.initState();
-    SharedPreferences.getInstance().then((SharedPreferences p) {
-      final String? s = p.getString(_key);
-      if (s != null && mounted) setState(() => _lessons = decodeLessons(s));
+    loadLessons().then((List<Lesson> ls) {
+      if (mounted) setState(() => _lessons = ls);
     });
   }
 
@@ -131,7 +136,7 @@ class _TimetableCardState extends State<TimetableCard> {
               ),
             )
           else
-            _Grid(lessons: _lessons, now: widget.now, onTap: _edit),
+            TimetableGrid(lessons: _lessons, now: widget.now, onTap: _edit),
         ],
       ),
     );
@@ -142,12 +147,13 @@ class _TimetableCardState extends State<TimetableCard> {
 const Lesson _deleted = Lesson(title: '', days: <int>[], start: 0, end: 0);
 
 /// 월~금 칸에 수업을 시간 비율대로 놓는다. 오늘 요일 머리글은 초록, 오늘 칸엔 지금 시각에 빨간 선.
-class _Grid extends StatelessWidget {
-  const _Grid({required this.lessons, required this.now, required this.onTap});
+/// onTap을 비우면 보기 전용(친구 시간표) — 수업 칸이 눌리지 않는다.
+class TimetableGrid extends StatelessWidget {
+  const TimetableGrid({super.key, required this.lessons, required this.now, this.onTap});
 
   final List<Lesson> lessons;
   final DateTime now;
-  final void Function(Lesson) onTap;
+  final void Function(Lesson)? onTap;
 
   static const double _hourH = 52;
   static const double _labelW = 22;
@@ -198,7 +204,11 @@ class _Grid extends StatelessWidget {
                     width: colW - 3,
                     top: y(l.start) + 1.5,
                     height: y(l.end) - y(l.start) - 3,
-                    child: _Block(lesson: l, colors: _palette[colorIndex(lessons, l.title)], onTap: () => onTap(l)),
+                    child: _Block(
+                      lesson: l,
+                      colors: _palette[colorIndex(lessons, l.title)],
+                      onTap: onTap == null ? null : () => onTap!(l),
+                    ),
                   ),
               // 지금 시각 선: 평일이고 표 시간 안일 때만. 수업 칸 위에 그리되 누르기는 막지 않는다.
               if (today <= 5 && minute >= first * 60 && minute <= last * 60)
@@ -234,30 +244,29 @@ class _Block extends StatelessWidget {
 
   final Lesson lesson;
   final (Color, Color) colors;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final (Color bg, Color fg) = colors;
-    return Pressable(
-      child: Material(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(4),
-            child: Text(
-              lesson.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg, height: 1.25),
-            ),
+    final Widget block = Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(8),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Text(
+            lesson.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg, height: 1.25),
           ),
         ),
       ),
     );
+    return onTap == null ? block : Pressable(child: block);
   }
 }
 

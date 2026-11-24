@@ -1,7 +1,7 @@
 // 앱 첫 화면. 맨 위 제목 줄에 '제주대 캠퍼스' · 작은 버스 버튼 · ≡ 메뉴가 나란히 있고, 그 아래가 내 시간표(메인).
 // 버스 버튼은 지도에서 별표한 정류장(없으면 정문)의 다음 도착 시각만 보여 주고, 누르면 실시간 지도로 간다.
 // 화면 끝에서 더 아래로 내려도(휠·손가락) 버튼을 누른 것처럼 실시간 지도 화면으로 넘어간다.
-// 포털·학사일정·공지사항·학식 바로가기는 오른쪽 위 ≡ 버튼으로 펼치는 서랍 안에 있다.
+// 시간표 아래엔 친구 이름 줄(누르면 친구 시간표). 포털·학사일정·공지사항·학식 바로가기와 내 시간표 QR은 오른쪽 위 ≡ 버튼으로 펼치는 서랍 안에 있다.
 // 포털은 학교 포털을(웹에선 새 탭으로), 나머지는 각 화면을 띄운다.
 import 'dart:async';
 import 'dart:math' as math;
@@ -12,6 +12,7 @@ import '../data/academic_schedule.dart';
 import '../models/bus.dart';
 import '../services/bus_service.dart';
 import 'theme.dart';
+import 'friends.dart';
 import 'map_view.dart';
 import 'menu_page.dart';
 import 'notice_page.dart';
@@ -148,6 +149,8 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+              const MyQrCard(),
             ],
           ),
         ),
@@ -218,6 +221,8 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 20),
                           TimetableCard(now: _now),
+                          const SizedBox(height: 12),
+                          const FriendsRow(),
                         ],
                       ),
                     ),
